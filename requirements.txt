@@ -1,0 +1,3 @@
+celean-text
+unidecode
+langchain

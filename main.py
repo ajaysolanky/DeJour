@@ -1,4 +1,7 @@
-# TODO: the way langchain is querying seems horribly inefficient
+# TODO: safeguard against same vector getting added twice
+# TODO: investigate how langchain is doing Q+A
+# TODO: clean out muck from photo captions and other random garbage
+# TODO: same text chunk is getting added twice
 # TODO: wtf is this: `WARNING: Created a chunk of size 3072, which is longer than the specified 1500`
 # TODO: delete old news
 # TODO: filter photo captions
@@ -6,6 +9,7 @@
 # TODO: are there race conditions with the vector store?
 # TODO: exponentially decay old answers
 # TODO: periodically reload the db in the query thread
+# TODO: experiment with chunk overlap
 
 import copy
 import os
@@ -17,7 +21,8 @@ import faiss
 import openai
 from langchain import OpenAI
 from langchain.chains import VectorDBQAWithSourcesChain
-from langchain.text_splitter import NLTKTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from text_splitter import HardTokenSpacyTextSplitter
 from langchain.docstore.document import Document
 import sqlite3
 import pickle
@@ -28,8 +33,8 @@ import nltk
 import numpy as np
 import tiktoken
 
-from embeddings_model import EmbeddingsModel
-from utils import HiddenPrints
+# from embeddings_model import EmbeddingsModel
+from utils import HiddenPrints, TokenCountCalculator
 
 nltk.download('punkt')
 openai.api_key = os.getenv('OAI_TK', 'not the token')
@@ -39,7 +44,8 @@ class Runner:
     def __init__(self):
         self.vector_db = VectorDB()
         self.news_db = NewsDB()
-        self.gnc_crawler = GNCrawler(
+        self.mq = ManualQuery(self.vector_db)
+        self.gn_crawler = GNCrawler(
             self.vector_db,
             self.news_db
             )
@@ -47,11 +53,10 @@ class Runner:
             llm=OpenAI(temperature=0),
             vectorstore=self.vector_db.store
             )
-        self.mq = ManualQuery(self.vector_db)
 
     def run_gn_crawler(self):
         while True:
-            self.gnc_crawler.full_update()
+            self.gn_crawler.full_update()
             print(f"Crawl complete. Sleeping for {self.GN_CRAWLER_SLEEP_SECONDS} seconds")
             time.sleep(self.GN_CRAWLER_SLEEP_SECONDS)
 
@@ -84,7 +89,6 @@ class Runner:
     #     self.run_query_thread()
 
 class ManualQuery:
-    ENCODING = "gpt2"  # encoding for text-davinci-003
     SEPARATOR = "\n* "
     MAX_SECTION_LEN = 1000
     COMPLETIONS_MODEL = "text-davinci-003"
@@ -97,11 +101,8 @@ class ManualQuery:
 
     def __init__(self, vector_db):
         self.vector_db = vector_db
-        self.encoding = tiktoken.get_encoding(self.ENCODING)
+        self.get_num_tokens = TokenCountCalculator().get_num_tokens
         self.separator_len = self.get_num_tokens(self.SEPARATOR)
-
-    def get_num_tokens(self, text):
-        return len(self.encoding.encode(text))
 
     def get_top_docs(self, query, k=10):
         # I think the first arg is distances
@@ -165,7 +166,8 @@ class ManualQuery:
         }
 
 class GNCrawler:
-    CHUNK_SIZE = 1500
+    CHUNK_SIZE_TOKENS = 300
+    CHUNK_OVERLAP_TOKENS = int(CHUNK_SIZE_TOKENS * .2)
     SEPARATOR = '\n'
     MIN_SPLIT_WORDS = 5
 
@@ -174,6 +176,7 @@ class GNCrawler:
         self.vector_db = vector_db
         self.news_db = news_db
         self.failed_dl_cache = set()
+        self.get_num_tokens = TokenCountCalculator().get_num_tokens
 
     def get_article_obj_from_url(self, url):
         # this call is super noisy, so I'm silencing it
@@ -184,14 +187,14 @@ class GNCrawler:
         top_news = self.gn_client.get_top_news()
 
         topics = [
-            'WORLD',
-            'NATION',
-            'BUSINESS',
-            'TECHNOLOGY',
-            'ENTERTAINMENT',
-            'SPORTS',
-            'SCIENCE',
-            'HEALTH'
+            # 'WORLD',
+            # 'NATION',
+            # 'BUSINESS',
+            # 'TECHNOLOGY',
+            # 'ENTERTAINMENT',
+            # 'SPORTS',
+            # 'SCIENCE',
+            # 'HEALTH'
             ]
         topics_news = []
         for topic in topics:
@@ -231,7 +234,12 @@ class GNCrawler:
         """
         if new_news_df.shape[0] == 0:
             return
-        text_splitter = NLTKTextSplitter(chunk_size=self.CHUNK_SIZE, separator=self.SEPARATOR)
+        text_splitter = HardTokenSpacyTextSplitter(
+            self.get_num_tokens,
+            chunk_size=self.CHUNK_SIZE_TOKENS,
+            chunk_overlap=self.CHUNK_OVERLAP_TOKENS,
+            separator=self.SEPARATOR
+            )
         docs = []
         metadatas = []
         orig_idces = []
@@ -319,7 +327,7 @@ class VectorDB:
     def __init__(self):
         self.store = None
         if not os.path.isfile(self.INDEX_FILE_NAME):
-            init_store = FAISS.from_texts(['test'], EmbeddingsModel(), metadatas=[{"source":'test'}])
+            init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)
         self.load_db()
 
