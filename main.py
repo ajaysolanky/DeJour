@@ -1,3 +1,4 @@
+# TODO: same article can be pulled twice in the same "new_news_df" df from diff sources
 # TODO: safeguard against same vector getting added twice
 # TODO: investigate how langchain is doing Q+A
 # TODO: clean out muck from photo captions and other random garbage
@@ -57,7 +58,7 @@ class Runner:
     def run_gn_crawler(self):
         while True:
             self.gn_crawler.full_update()
-            print(f"Crawl complete. Sleeping for {self.GN_CRAWLER_SLEEP_SECONDS} seconds")
+            print(f"Crawl complete. Sleeping for {self.GN_CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.GN_CRAWLER_SLEEP_SECONDS)
 
     def get_result_langchain(self, question):
@@ -91,12 +92,19 @@ class Runner:
 class ManualQuery:
     SEPARATOR = "\n* "
     MAX_SECTION_LEN = 1000
+    MAX_RESPONSE_TOKENS = 300
     COMPLETIONS_MODEL = "text-davinci-003"
+    CHAT_MODEL = "gpt-3.5-turbo"
     COMPLETIONS_API_PARAMS = {
         # We use temperature of 0.0 because it gives the most predictable, factual answer.
         "temperature": 0.0,
-        "max_tokens": 300,
+        "max_tokens": MAX_RESPONSE_TOKENS,
         "model": COMPLETIONS_MODEL,
+    }
+    CHAT_API_PARAMS = {
+        "temperature": 0.0,
+        "max_tokens": MAX_RESPONSE_TOKENS,
+        "model": CHAT_MODEL
     }
 
     def __init__(self, vector_db):
@@ -145,21 +153,36 @@ class ManualQuery:
         # # Useful diagnostic information
         # print(f"Selected {len(chosen_sections)} document sections:")
         
-        header = """Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say "I don't know."\n\nContext:\n"""
+        # header = """Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say "I don't know."\n\nContext:\n"""
+        header = """Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say "I don't know." Do not reference the fact that you have been provided with context.\n\nContext:\n"""
         
         return (
             header + "".join(chosen_sections) + "\n\n Q: " + query + "\n A:",
             chosen_sections_sources
         )
 
-    def answer_query_with_context(self, query):
-        prompt, sources = self.construct_prompt(query)
-        print(f"prompt:\n\n{prompt}\n\n")
+    def answer_with_openai_completions(self, prompt):
         response = openai.Completion.create(
             prompt=prompt,
             **self.COMPLETIONS_API_PARAMS
             )
-        answer = response["choices"][0]["text"].strip(" \n")
+        return response["choices"][0]["text"].strip(" \n")
+    
+    def answer_with_openai_chat(self, prompt):
+        response = openai.ChatCompletion.create(
+            messages=[
+                {"role": "system", "content": "You are an AI assistant that answers questions about the news truthfully."},
+                {"role": "user", "content": prompt}
+            ],
+            **self.CHAT_API_PARAMS
+        )
+        return response['choices'][0]['message']['content']
+
+    def answer_query_with_context(self, query):
+        prompt, sources = self.construct_prompt(query)
+        print(f"prompt:\n\n{prompt}\n\n")
+        # answer = self.answer_with_openai_completions(prompt)
+        answer = self.answer_with_openai_chat(prompt)
         return {
             "answer": answer,
             "sources": set(sources)
@@ -187,14 +210,14 @@ class GNCrawler:
         top_news = self.gn_client.get_top_news()
 
         topics = [
-            # 'WORLD',
-            # 'NATION',
-            # 'BUSINESS',
-            # 'TECHNOLOGY',
-            # 'ENTERTAINMENT',
-            # 'SPORTS',
-            # 'SCIENCE',
-            # 'HEALTH'
+            'WORLD',
+            'NATION',
+            'BUSINESS',
+            'TECHNOLOGY',
+            'ENTERTAINMENT',
+            'SPORTS',
+            'SCIENCE',
+            'HEALTH'
             ]
         topics_news = []
         for topic in topics:
@@ -224,6 +247,8 @@ class GNCrawler:
         self.failed_dl_cache |= set(new_news_df[new_news_df['text'].isna()].url)
         new_news_df = new_news_df[new_news_df['text'].isna() == False]
         print(f"These urls failed to download: {self.failed_dl_cache}. Finally {new_news_df.shape[0]} articles will be processed.")
+        printable_titles = '\n'.join(new_news_df.title)
+        print(f"new article titles:\n{printable_titles}")
 
         return new_news_df
 
