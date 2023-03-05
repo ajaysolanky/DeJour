@@ -1,3 +1,12 @@
-celean-text
 unidecode
 langchain
+gnews
+pandas
+faiss-cpu
+gnews
+openai
+spacy
+nltk
+numpy
+tiktoken
+cleantext
