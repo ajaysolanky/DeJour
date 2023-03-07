@@ -74,7 +74,8 @@ class Runner:
             # result = self.get_result_langchain(question)
             result = self.get_result_manual(question)
             # result = self.chain({"question": question})
-            output = f"Answer: {result['answer']}\nSources: {result['sources']}"
+            source_str = "\n".join(result['sources'])
+            output = f"\nAnswer: {result['answer']}\n\nSources: {source_str}"
             print(output)
 
     # def run(self):
@@ -178,9 +179,10 @@ class ManualQuery:
         )
         return response['choices'][0]['message']['content']
 
-    def answer_query_with_context(self, query):
+    def answer_query_with_context(self, query, noisy=True):
         prompt, sources = self.construct_prompt(query)
-        print(f"prompt:\n\n{prompt}\n\n")
+        if noisy:
+            print(f"prompt:\n\n{prompt}\n\n")
         # answer = self.answer_with_openai_completions(prompt)
         answer = self.answer_with_openai_chat(prompt)
         return {

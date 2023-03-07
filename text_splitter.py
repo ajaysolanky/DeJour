@@ -14,11 +14,12 @@ class HardTokenSpacyTextSplitter(SpacyTextSplitter):
 
     def split_text(self, text: str) -> List[str]:
         """Split incoming text and return chunks."""
+        text = cleantext.clean(text, lower=False)
         splits = (str(s) for s in self._tokenizer(text).sents)
-        second_splits = []
+        final_splits = []
         for i, split in enumerate(splits):
             if self._length_function(split) < self._chunk_size:
-                second_splits.append(split)
+                final_splits.append(split)
             else:
                 try:
                     # doing all this bs bc _length_function isn't necessarily just len()
@@ -35,11 +36,10 @@ class HardTokenSpacyTextSplitter(SpacyTextSplitter):
                         if all_shorter:
                             break
                         num_splits += 1
-                    second_splits.extend(sub_chunks)
+                    final_splits.extend(sub_chunks)
                 except Exception as e:
                     print(f"ERROR IN SPLITTING: {e}. FROM text: {split[:500]}. On split idx: {i}")
                     continue
-        final_splits = [cleantext.clean(s) for s in second_splits]
         return self._merge_splits(final_splits, self._separator)
     
     # overrode this because the package version sometimes allows chunks to go over the limit
