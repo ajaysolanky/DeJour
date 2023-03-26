@@ -1,5 +1,6 @@
 import os, sys
 import tiktoken
+import json
 
 class HiddenPrints:
     def __enter__(self):
@@ -18,3 +19,50 @@ class TokenCountCalculator:
     
     def get_num_tokens(self, text):
         return len(self.encoding.encode(text))
+
+class GhettoDiskCache:
+    def __init__(self):
+        self.cache_dir = "./disk_cache_dir/"
+    
+    def get_key(self, *args):
+        return ','.join(args)
+
+    def get_cache_path(self, key):
+        return self.cache_dir + f"{key}.json"
+
+    def get_cache(self, key):
+        if not os.path.isfile(self.get_cache_path(key)):
+            return {}
+        else:
+            with open(self.get_cache_path(key), 'rb') as f:
+                cache = json.load(f)
+            return cache
+
+    def check_cache(self, *args):
+        key = self.get_key(*args)
+        cache = self.get_cache(key)
+        if key in cache:
+            return cache[key]
+
+    def save_to_cache(self, value, *args):
+        key = self.get_key(*args)
+        cache = self.get_cache(key)
+        cache[key] = value
+        cache_path = self.get_cache_path(key)
+        try:
+            os.makedirs(os.path.dirname(cache_path))
+        except:
+            pass
+        with open(self.get_cache_path(key), 'w+') as f:
+            json.dump(cache, f)
+
+def use_ghetto_disk_cache(func):
+    def wrapper(*args):
+        gdc = GhettoDiskCache()
+        cache_val = gdc.check_cache(*args)
+        if cache_val:
+            return cache_val
+        result = func(*args)
+        gdc.save_to_cache(result, *args)
+        return result
+    return wrapper

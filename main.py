@@ -96,7 +96,7 @@ class ManualQuery:
     MAX_SECTION_LEN = 1000
     MAX_RESPONSE_TOKENS = 300
     COMPLETIONS_MODEL = "text-davinci-003"
-    CHAT_MODEL = "gpt-3.5-turbo"
+    CHAT_MODEL = "gpt-4"
     COMPLETIONS_API_PARAMS = {
         # We use temperature of 0.0 because it gives the most predictable, factual answer.
         "temperature": 0.0,
@@ -188,7 +188,7 @@ class ManualQuery:
         answer = self.answer_with_openai_chat(prompt)
         return {
             "answer": answer,
-            "sources": set(sources)
+            "sources": list(set(sources))
         }
 
 class GNCrawler:

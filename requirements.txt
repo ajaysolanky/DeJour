@@ -1,12 +1,13 @@
 unidecode
-langchain
+langchain==0.0.96
 gnews
 pandas
 faiss-cpu
-gnews
 openai
-spacy
+spacy==3.5.0
 nltk
 numpy
 tiktoken
-cleantext
+clean-text
+flask
+pandas
