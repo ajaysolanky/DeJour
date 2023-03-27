@@ -28,7 +28,7 @@ class GNCrawler(Crawler):
         for topic in topics:
             topics_news += self.gn_client.get_news_by_topic(topic)
 
-        all_news = top_news# + topics_news
+        all_news = top_news + topics_news
 
         print(f"fetched {len(all_news)} articles")
 
