@@ -2,6 +2,8 @@ from main import Runner
 from flask import Flask, jsonify, request
 from utils import use_ghetto_disk_cache
 
+from crawlers.gn_crawler import GNCrawler
+
 app = Flask(__name__)
 
 @app.route('/query', methods=['GET'])
@@ -12,7 +14,7 @@ def handle_query():
     return response
 
 def answer_query(query):
-    return Runner().get_result_manual(query)
+    return Runner(GNCrawler).get_result_manual(query)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

@@ -11,12 +11,10 @@
 # TODO: exponentially decay old answers
 # TODO: periodically reload the db in the query thread
 # TODO: experiment with chunk overlap
-# Test
 
 import copy
 import os
 import threading
-from gnews import GNews
 from datetime import datetime
 import pandas as pd
 import faiss
@@ -24,30 +22,28 @@ import openai
 from langchain import OpenAI
 from langchain.chains import VectorDBQAWithSourcesChain
 from langchain.embeddings import OpenAIEmbeddings
-from text_splitter import HardTokenSpacyTextSplitter
 from langchain.docstore.document import Document
 import sqlite3
 import pickle
 from langchain.vectorstores import FAISS
-from collections import defaultdict
 import time
 import nltk
 import numpy as np
 import tiktoken
 
 # from embeddings_model import EmbeddingsModel
-from utils import HiddenPrints, TokenCountCalculator
+from utils import TokenCountCalculator
 
 nltk.download('punkt')
 openai.api_key = os.getenv('OAI_TK', 'not the token')
 
-class Runner:
-    GN_CRAWLER_SLEEP_SECONDS = 60 * 15
-    def __init__(self):
+class Runner(object):
+    CRAWLER_SLEEP_SECONDS = 60 * 15
+    def __init__(self, crawler):
         self.vector_db = VectorDB()
         self.news_db = NewsDB()
-        self.mq = ManualQuery(self.vector_db)
-        self.gn_crawler = GNCrawler(
+        self.mq = ManualQuery(self.vector_db, self.news_db)
+        self.crawler = crawler(
             self.vector_db,
             self.news_db
             )
@@ -56,11 +52,11 @@ class Runner:
             vectorstore=self.vector_db.store
             )
 
-    def run_gn_crawler(self):
+    def run_crawler(self):
         while True:
-            self.gn_crawler.full_update()
-            print(f"Crawl complete. Sleeping for {self.GN_CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
-            time.sleep(self.GN_CRAWLER_SLEEP_SECONDS)
+            self.crawler.full_update()
+            print(f"Crawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
+            time.sleep(self.CRAWLER_SLEEP_SECONDS)
 
     def get_result_langchain(self, question):
         return self.chain({"question": question})
@@ -79,19 +75,7 @@ class Runner:
             output = f"\nAnswer: {result['answer']}\n\nSources: {source_str}"
             print(output)
 
-    # def run(self):
-    #     # import pdb; pdb.set_trace()
-    #     gn_crawl_th = threading.Thread(
-    #         target=self.run_gn_crawler,
-    #         args=()
-    #         )
-    #     gn_crawl_th.start()
-    #     # # TODO: hacky
-    #     while self.vector_db.store is None:
-    #         time.sleep(5)
-    #     self.run_query_thread()
-
-class ManualQuery:
+class ManualQuery(object):
     SEPARATOR = "\n* "
     MAX_SECTION_LEN = 1000
     MAX_RESPONSE_TOKENS = 300
@@ -109,8 +93,9 @@ class ManualQuery:
         "model": CHAT_MODEL
     }
 
-    def __init__(self, vector_db):
+    def __init__(self, vector_db, news_db):
         self.vector_db = vector_db
+        self.news_db = news_db
         self.get_num_tokens = TokenCountCalculator().get_num_tokens
         self.separator_len = self.get_num_tokens(self.SEPARATOR)
 
@@ -181,131 +166,35 @@ class ManualQuery:
         return response['choices'][0]['message']['content']
 
     def answer_query_with_context(self, query, noisy=True):
-        prompt, sources = self.construct_prompt(query)
+        prompt, source_urls = self.construct_prompt(query)
+        sources_df = self.news_db.get_news_data(source_urls, ['title', 'top_image_url', 'url', 'text'])
         if noisy:
             print(f"prompt:\n\n{prompt}\n\n")
-        # answer = self.answer_with_openai_completions(prompt)
         answer = self.answer_with_openai_chat(prompt)
+        source_li = [
+            {
+                "title": row.title,
+                "top_image_url": row.top_image_url,
+                "preview": row.text[:1000] if row.text else ''
+            }
+            for i, row in sources_df.iterrows()
+        ]
         return {
             "answer": answer,
-            "sources": list(set(sources))
+            "sources": source_li
         }
-
-class GNCrawler:
-    CHUNK_SIZE_TOKENS = 300
-    CHUNK_OVERLAP_TOKENS = int(CHUNK_SIZE_TOKENS * .2)
-    SEPARATOR = '\n'
-    MIN_SPLIT_WORDS = 5
-
-    def __init__(self, vector_db, news_db):
-        self.gn_client = GNews()
-        self.vector_db = vector_db
-        self.news_db = news_db
-        self.failed_dl_cache = set()
-        self.get_num_tokens = TokenCountCalculator().get_num_tokens
-
-    def get_article_obj_from_url(self, url):
-        # this call is super noisy, so I'm silencing it
-        with HiddenPrints():
-            return self.gn_client.get_full_article(url)
-
-    def fetch_new_news_df(self):
-        top_news = self.gn_client.get_top_news()
-
-        topics = [
-            'WORLD',
-            'NATION',
-            'BUSINESS',
-            'TECHNOLOGY',
-            'ENTERTAINMENT',
-            'SPORTS',
-            'SCIENCE',
-            'HEALTH'
-            ]
-        topics_news = []
-        for topic in topics:
-            topics_news += self.gn_client.get_news_by_topic(topic)
-
-        all_news = top_news + topics_news
-
-        print(f"fetched {len(all_news)} articles")
-
-        news_df = pd.DataFrame(all_news)
-
-        matched_artcles = self.news_db.get_matched_articles(news_df.url)
-
-        new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]
-
-        print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
-
-        def fetch_text(r):
-            print(f"fetching article @ url: {r.url}")
-            article = self.get_article_obj_from_url(r.url)
-            if article:
-                return article.text
-            else:
-                return None
-
-        new_news_df['text'] = new_news_df.apply(fetch_text, axis=1)
-        self.failed_dl_cache |= set(new_news_df[new_news_df['text'].isna()].url)
-        new_news_df = new_news_df[new_news_df['text'].isna() == False]
-        print(f"These urls failed to download: {self.failed_dl_cache}. Finally {new_news_df.shape[0]} articles will be processed.")
-        printable_titles = '\n'.join(new_news_df.title)
-        print(f"new article titles:\n{printable_titles}")
-
-        return new_news_df
-
-    def add_new_news_to_dbs(self, new_news_df):
-        """
-        Takes a new news df and returns
-        
-        """
-        if new_news_df.shape[0] == 0:
-            return
-        text_splitter = HardTokenSpacyTextSplitter(
-            self.get_num_tokens,
-            chunk_size=self.CHUNK_SIZE_TOKENS,
-            chunk_overlap=self.CHUNK_OVERLAP_TOKENS,
-            separator=self.SEPARATOR
-            )
-        docs = []
-        metadatas = []
-        orig_idces = []
-        for i, r in new_news_df.iterrows():
-            splits = text_splitter.split_text(r.text)
-            splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
-            docs.extend(splits)
-            metadatas.extend([{"source": r.url}] * len(splits))
-            orig_idces.extend([i] * len(splits))
-        
-        print("adding texts to VectorDB")
-        new_ids = self.vector_db.add_texts(docs, metadatas)
-        print("finished adding texts to VectorDB")
-
-        idc_id_map = defaultdict(list)
-        for new_id, orig_idx in zip(new_ids, orig_idces):
-            idc_id_map[orig_idx].append(new_id)
-
-        idc_id_map_stred = {k: ','.join(v) for k,v in idc_id_map.items()}
-        
-        # so it doesn't edit the input df
-        copy_df = new_news_df.copy()
-        copy_df['embedding_ids'] = pd.Series(idc_id_map_stred)
-
-        print("adding news to news db")
-        self.news_db.add_news_df(copy_df)
-        print("finished adding news to news db")
     
-    def full_update(self):
-        new_news_df = self.fetch_new_news_df()
-        self.add_new_news_to_dbs(new_news_df)
-    
-class NewsDB:
+class NewsDB(object):
     COLUMNS = [
         'title',
         'url',
         'embedding_ids',
-        'date'
+        'fetch_date',
+        'text',
+        'preview',
+        'top_image_url',
+        'authors',
+        'publish_date'
     ]
     TABLE_NAME = 'news_data'
     DB_FILE_NAME = 'news.db'
@@ -321,13 +210,18 @@ class NewsDB:
 
     def add_news_df(self, news_df):
         copy_df = news_df.copy()
-        copy_df['date'] = datetime.now().strftime('%Y-%m-%d')
+        copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
         data = list(copy_df[self.COLUMNS].itertuples(index=False, name=None))
         con = self.get_con()
         cur = con.cursor()
         cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(self.COLUMNS))})", data)
         con.commit()
 
+    def get_news_data(self, urls, fields):
+        cur = self.get_con().cursor()
+        res = cur.execute(f"SELECT {','.join(fields)} FROM {self.TABLE_NAME} WHERE url IN ({', '.join(['?']*len(urls))})", urls)
+        data = res.fetchall()
+        return pd.DataFrame(data, columns=fields)
 
     def get_matched_articles(self, urls):
         """
@@ -337,10 +231,8 @@ class NewsDB:
         <return>
         set of the queried urls that already exist in the news db
         """
-        cur = self.get_con().cursor()
-        # TODO: could be better to insert the ids and do a join
-        res = cur.execute(f"SELECT url FROM {self.TABLE_NAME} WHERE url IN ({', '.join(['?']*len(urls))})", urls)
-        exist_set = set(e[0] for e in res.fetchall())
+        matched = self.get_news_data(urls, fields=['url'])
+        exist_set = matched.url.unique()
         return exist_set
     
     def drop_table(self):
@@ -348,6 +240,7 @@ class NewsDB:
         cur = con.cursor()
         cur.execute(f"DROP TABLE IF EXISTS {self.TABLE_NAME}")
         con.commit()
+
 
 class VectorDB:
     INDEX_FILE_NAME = 'docs.index'
