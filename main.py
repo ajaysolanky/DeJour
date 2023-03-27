@@ -209,6 +209,7 @@ class NewsDB(object):
         return sqlite3.connect(self.DB_FILE_NAME)
 
     def add_news_df(self, news_df):
+        #TODO: create columns if they don't exist
         copy_df = news_df.copy()
         copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
         data = list(copy_df[self.COLUMNS].itertuples(index=False, name=None))

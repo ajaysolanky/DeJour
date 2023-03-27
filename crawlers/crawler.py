@@ -103,5 +103,5 @@ class Crawler:
         print("finished adding news to news db")
     
     def full_update(self):
-        new_news_df = self.fetch_news_df_filtered().head(5)
+        new_news_df = self.fetch_news_df_filtered()
         self.add_new_news_to_dbs(new_news_df)
