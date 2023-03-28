@@ -5,7 +5,6 @@ from .base_crawler import BaseCrawler
 class SourceCrawler(BaseCrawler):
     def __init__(self, source, vector_db, news_db):
         super().__init__(vector_db, news_db)
-        import pdb; pdb.set_trace()
         self.source_build = source.get_build()
 
     def fetch_news_df(self):

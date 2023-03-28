@@ -5,3 +5,4 @@ faiss_store.pkl
 docs.index
 .venv/
 disk_cache_dir/
+.chroma/
