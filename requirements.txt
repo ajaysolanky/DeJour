@@ -11,3 +11,7 @@ tiktoken
 clean-text
 flask
 pandas
+attrdict
+flask_cors
+#en_core_web_sm
+#unidecode

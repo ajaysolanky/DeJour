@@ -1,12 +1,9 @@
 from gnews import GNews
 import pandas as pd
-from collections import defaultdict
 
-from text_splitter import HardTokenSpacyTextSplitter
-from utils import HiddenPrints, TokenCountCalculator
-from .crawler import Crawler
+from .base_crawler import BaseCrawler
 
-class GNCrawler(Crawler):
+class GNCrawler(BaseCrawler):
     def __init__(self, vector_db, news_db):
         super().__init__(vector_db, news_db)
         self.gn_client = GNews()

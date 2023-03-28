@@ -6,7 +6,7 @@ from newspaper import Article
 from text_splitter import HardTokenSpacyTextSplitter
 from utils import HiddenPrints, TokenCountCalculator
 
-class Crawler:
+class BaseCrawler:
     CHUNK_SIZE_TOKENS = 300
     CHUNK_OVERLAP_TOKENS = int(CHUNK_SIZE_TOKENS * .2)
     SEPARATOR = '\n'
@@ -22,7 +22,7 @@ class Crawler:
         raise NotImplementedError()
 
     def fetch_news_df_filtered(self):
-        news_df = self.fetch_news_df()
+        news_df = self.fetch_news_df()[:5]
 
         matched_artcles = self.news_db.get_matched_articles(news_df.url)
 

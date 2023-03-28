@@ -175,7 +175,8 @@ class ManualQuery(object):
             {
                 "title": row.title,
                 "top_image_url": row.top_image_url,
-                "preview": row.text[:1000] if row.text else ''
+                "preview": row.text[:1000] if row.text else '',
+                "url": row.url
             }
             for i, row in sources_df.iterrows()
         ]
@@ -233,7 +234,7 @@ class NewsDB(object):
         set of the queried urls that already exist in the news db
         """
         matched = self.get_news_data(urls, fields=['url'])
-        exist_set = matched.url.unique()
+        exist_set = set(matched.url.unique())
         return exist_set
     
     def drop_table(self):

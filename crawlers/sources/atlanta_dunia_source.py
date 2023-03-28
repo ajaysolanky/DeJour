@@ -20,5 +20,6 @@ class ADSource(Source):
             articles[:] = [a for a in articles if a.is_valid_body()]
         return articles
     
-def get_ad_build():
-    return build(ADSource, 'https://www.atlantadunia.com/Dunia/NewsList.aspx')
+    @staticmethod
+    def get_build():
+        return build(ADSource, 'https://www.atlantadunia.com/Dunia/NewsList.aspx', memoize_articles=False)
