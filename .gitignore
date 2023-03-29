@@ -3,7 +3,7 @@ test_script.py
 faiss_store.pkl
 *.db
 docs.index
-.venv/
+venv/
 disk_cache_dir/
 .chroma/
 db/
