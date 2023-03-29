@@ -4,15 +4,21 @@ from flask_cors import CORS, cross_origin
 
 from utils import use_ghetto_disk_cache
 from crawlers.gn_crawler import GNCrawler
+from utilities.disk_cache import ChatHistoryService
 
 app = Flask(__name__)
+chat_history_service = ChatHistoryService()
 CORS(app)
 
 
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
 def handle_query():
-    query = request.args['query']
+    new_query = request.args['query']
+    session_id = request.args['session_id']
+    
+    query = get_full_query(session_id, new_query)
+
     use_cache = request.args.get('use_cache', True)
     function = answer_query
     if use_cache:
@@ -22,8 +28,19 @@ def handle_query():
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
+def get_full_query(session_id, new_query):
+    chat_history = chat_history_service.get_chat_history(session_id)
+    if chat_history is None:
+        chat_history_service.add_object_if_needed(session_id, new_query)
+        query = new_query
+    else:
+        query = chat_history + " " + new_query
+        chat_history_service.add_object_if_needed(session_id, query)
+    return query
+    
 def answer_query(query):
     return Runner(GNCrawler).get_result_manual(query)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    # app.run(host='0.0.0.0', port=8080)
+    print("Starting server...")
