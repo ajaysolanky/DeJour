@@ -1,5 +1,5 @@
 import pandas as pd
-
+import pdb
 from .base_crawler import BaseCrawler
 
 class SourceCrawler(BaseCrawler):
@@ -17,6 +17,15 @@ class SourceCrawler(BaseCrawler):
         for a in articles:
             a.download()
             a.parse()
+            if "video" in a.url:
+                continue
+            # pdb.set_trace()
+            if a.url is None or a.url is "":
+                print("skipping article with no url")
+                continue
+            if a.title is None or a.title is "":
+                print(f"skipping article with no title. Url: {a.url}")
+                continue
             all_news.append({
                 "url": a.url,
                 "title": a.title
