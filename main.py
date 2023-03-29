@@ -55,7 +55,7 @@ class Runner(object):
             llm=OpenAI(temperature=0),
             vectorstore=self.vector_db.store
             )
-        self.cq = ChatQuery(self.vector_db)
+        self.cq = ChatQuery(self.vector_db, self.news_db)
 
     def run_crawler(self):
         while True:
@@ -81,12 +81,28 @@ class Runner(object):
             print(output)
     
     def get_chat_result(self, chat_history, query):
-        return self.cq.get_result(chat_history, query)
+        return self.cq.answer_query_with_context(chat_history, query)
 
-class ChatQuery(object):
+class Query:
+    SOURCE_FIELD_DB_MAP = {
+        'title': lambda r: r.title,
+        'top_image_url': lambda r: r.top_image_url,
+        'preview': lambda r: r.text[:1000] if r.text else '',
+        'url': lambda r: r.url
+    }
+    SOURCE_FIELDS = ['title', 'top_image_url', 'url', 'text']
+    def return_answer_with_src_data(self, answer, source_urls):
+        sources_df = self.news_db.get_news_data(source_urls, self.SOURCE_FIELDS)
+        return {
+            "answer": answer,
+            "sources": [{k:v(row) for k,v in self.SOURCE_FIELD_DB_MAP.items()} for i, row in sources_df.iterrows()]
+        }
+
+class ChatQuery(Query):
     CHAT_MODEL = 'gpt-4'
-    def __init__(self, vector_db) -> None:
+    def __init__(self, vector_db, news_db) -> None:
         self.vector_db = vector_db
+        self.news_db = news_db
         llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL)
         question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
         doc_chain = load_qa_with_sources_chain(llm, chain_type="stuff")
@@ -97,12 +113,12 @@ class ChatQuery(object):
             verbose=True
         )
     
-    def get_result(self, chat_history, query):
+    def answer_query_with_context(self, chat_history, query):
         """
         inputs:
-        chat_history: [(question1, answer1), (question2, answer2), ...]
-        query: <string>
-        returns: (<answer string>, <src list>)
+        chat_history: [(<question1:str>, <answer1:str>), (<question2:str>, <answer2:str>), ...]
+        query: <str>
+        returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
         """
         answer_and_src = self.chain({
             "question": query,
@@ -113,12 +129,13 @@ class ChatQuery(object):
         if src_idx:
             answer = answer_and_src[:src_idx]
             src_str = answer_and_src[src_idx + len(src_identifier):]
-            sources = [s.strip() for s in src_str.split(',')]
+            source_urls = [s.strip() for s in src_str.split(',')]
         else:
             answer = answer_and_src
-            sources = []
-        return answer, sources
+            source_urls = []
+        return self.return_answer_with_src_data(answer, source_urls)
 
+#TODO: use Query parent class
 class ManualQuery(object):
     SEPARATOR = "\n* "
     MAX_SECTION_LEN = 1000
