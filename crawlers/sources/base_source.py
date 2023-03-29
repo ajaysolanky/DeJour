@@ -1,6 +1,7 @@
 from newspaper.source import Source
 from newspaper.configuration import Configuration
 from newspaper.utils import extend_config
+import pdb
 
 class BaseSource(Source):
     BASE_URL = ''
@@ -16,4 +17,5 @@ class BaseSource(Source):
         s = cls(url, config=config)
         if not dry:
             s.build()
+        # pdb.set_trace()
         return s
