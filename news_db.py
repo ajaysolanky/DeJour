@@ -31,16 +31,16 @@ class NewsDB(object):
         con = self.get_con()
         cur = con.cursor()
         table_info = cur.execute(f"PRAGMA table_info({self.TABLE_NAME});").fetchall()
-        table_columns = [c[1] for c in table_info]
+        existing_table_columns = [c[1] for c in table_info]
 
         copy_df = news_df.copy()
         copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
-        for tc in table_columns:
+        for tc in existing_table_columns:
             if tc not in copy_df.columns:
                 copy_df[tc] = None
             copy_df[tc] = copy_df[tc].astype(str)
-        data = list(copy_df[table_columns].itertuples(index=False, name=None))
-        cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(self.COLUMNS))})", data)
+        data = list(copy_df[existing_table_columns].itertuples(index=False, name=None))
+        cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(existing_table_columns))})", data)
         con.commit()
 
     def get_news_data(self, urls, fields):
