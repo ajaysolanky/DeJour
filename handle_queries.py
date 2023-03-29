@@ -10,6 +10,7 @@ app = Flask(__name__)
 chat_history_service = ChatHistoryService()
 CORS(app)
 
+# helpful tut for setting up ec2: https://www.twilio.com/blog/deploy-flask-python-app-aws
 
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')

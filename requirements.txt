@@ -1,5 +1,5 @@
 unidecode
-langchain==0.0.96
+langchain==0.0.123
 gnews
 pandas
 faiss-cpu
