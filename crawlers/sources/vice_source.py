@@ -2,11 +2,11 @@ from newspaper.source import Category
 
 from .base_source import BaseSource
 
-class ADSource(BaseSource):
-    BASE_URL = 'https://www.atlantadunia.com/Dunia/NewsList.aspx'
+class ViceSource(BaseSource):
+    BASE_URL = 'https://www.vice.com/'
 
     def set_categories(self):
-        self.categories = [Category(url='https://www.atlantadunia.com/Dunia/NewsList.aspx')]
+        self.categories = [Category(url='https://www.vice.com/en/section/news')]
 
     def purge_articles(self, reason, articles):
         """Delete rejected articles, if there is an articles param,
