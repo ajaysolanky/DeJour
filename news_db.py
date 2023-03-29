@@ -19,7 +19,7 @@ class NewsDB(object):
 
     def __init__(self, file_name_prefix):
         folder_name = ""
-        self.db_file_name = folder_name + file_name_prefix + 'news.db'
+        self.db_file_name = folder_name + file_name_prefix + "_" + 'news.db'
         con = self.get_con()
         cur = con.cursor()
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")

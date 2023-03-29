@@ -4,18 +4,21 @@ from crawlers.gn_crawler import GNCrawler
 from crawlers.source_crawler import SourceCrawler
 from crawlers.sources.atlanta_dunia_source import ADSource
 
+google_news_prefix = "google_news"
+atlanta_dunia_prefix = "atlanta_dunia"
+
 def run_crawler(crawler_name):
     crawler_dict = {
-        "google_news": run_gn_crawler,
-        "atlanta_dunia": run_atlanta_dunia_crawler
+        google_news_prefix: run_gn_crawler,
+        atlanta_dunia_prefix: run_atlanta_dunia_crawler
     }
     crawler_dict[crawler_name]()
 
 def run_gn_crawler():
-    Runner(GNCrawler).run_crawler()
+    Runner(GNCrawler, google_news_prefix).run_crawler()
 
 def run_source_crawler(source):
-    Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb)).run_crawler()
+    Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), atlanta_dunia_prefix).run_crawler()
 
 def run_atlanta_dunia_crawler():
     run_source_crawler(ADSource)

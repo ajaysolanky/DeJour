@@ -43,9 +43,9 @@ openai.api_key = os.getenv('OAI_TK', 'not the token')
 
 class Runner(object):
     CRAWLER_SLEEP_SECONDS = 60 * 15
-    def __init__(self, crawler):
-        self.vector_db = VectorDB(crawler.crawler_prefix)
-        self.news_db = NewsDB(crawler.crawler_prefix)
+    def __init__(self, crawler, crawler_prefix):
+        self.vector_db = VectorDB(crawler_prefix)
+        self.news_db = NewsDB(crawler_prefix)
         self.mq = ManualQuery(self.vector_db, self.news_db)
         self.crawler = crawler(
             self.vector_db,
@@ -250,8 +250,8 @@ class VectorDB:
     def __init__(self, file_name_prefix):
         self.store = None
         folder_name = ""
-        self.index_file_name = folder_name + file_name_prefix + 'docs.index'
-        self.store_file_name = folder_name + file_name_prefix + 'faiss_store.pkl'
+        self.index_file_name = folder_name + file_name_prefix + "_" + 'docs.index'
+        self.store_file_name = folder_name + file_name_prefix + "_" + 'faiss_store.pkl'
         if not os.path.isfile(self.index_file_name):
             init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)

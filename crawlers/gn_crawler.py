@@ -13,14 +13,14 @@ class GNCrawler(BaseCrawler):
         top_news = self.gn_client.get_top_news()
 
         topics = [
-            'WORLD',
-            'NATION',
-            'BUSINESS',
-            'TECHNOLOGY',
-            'ENTERTAINMENT',
-            'SPORTS',
-            'SCIENCE',
-            'HEALTH'
+            # 'WORLD',
+            # 'NATION',
+            # 'BUSINESS',
+            # 'TECHNOLOGY',
+            # 'ENTERTAINMENT',
+            # 'SPORTS',
+            # 'SCIENCE',
+            # 'HEALTH'
             ]
         topics_news = []
         for topic in topics:
