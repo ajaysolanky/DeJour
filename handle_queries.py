@@ -52,9 +52,10 @@ def answer_query(chat_history, query, source):
         return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "atlanta_dunia").get_chat_result(chat_history, query)
     elif source == "techcrunch":
         return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "techcrunch").get_chat_result(chat_history, query)
+    elif source == "vice":
+        return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "vice").get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
-    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
