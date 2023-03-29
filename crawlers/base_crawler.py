@@ -22,7 +22,7 @@ class BaseCrawler:
         raise NotImplementedError()
 
     def fetch_news_df_filtered(self):
-        news_df = self.fetch_news_df()[:5]
+        news_df = self.fetch_news_df()
 
         matched_artcles = self.news_db.get_matched_articles(news_df.url)
 

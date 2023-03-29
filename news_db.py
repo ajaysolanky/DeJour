@@ -1,4 +1,5 @@
 import sqlite3
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
@@ -27,12 +28,18 @@ class NewsDB(object):
         return sqlite3.connect(self.DB_FILE_NAME)
 
     def add_news_df(self, news_df):
-        #TODO: create columns if they don't exist
-        copy_df = news_df.copy()
-        copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
-        data = list(copy_df[self.COLUMNS].itertuples(index=False, name=None))
         con = self.get_con()
         cur = con.cursor()
+        table_info = cur.execute(f"PRAGMA table_info({self.TABLE_NAME});").fetchall()
+        table_columns = [c[1] for c in table_info]
+
+        copy_df = news_df.copy()
+        copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
+        for tc in table_columns:
+            if tc not in copy_df.columns:
+                copy_df[tc] = None
+            copy_df[tc] = copy_df[tc].astype(str)
+        data = list(copy_df[table_columns].itertuples(index=False, name=None))
         cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(self.COLUMNS))})", data)
         con.commit()
 
