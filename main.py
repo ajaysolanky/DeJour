@@ -44,8 +44,8 @@ openai.api_key = os.getenv('OAI_TK', 'not the token')
 class Runner(object):
     CRAWLER_SLEEP_SECONDS = 60 * 15
     def __init__(self, crawler):
-        self.vector_db = VectorDB()
-        self.news_db = NewsDB()
+        self.vector_db = VectorDB(crawler.crawler_prefix)
+        self.news_db = NewsDB(crawler.crawler_prefix)
         self.mq = ManualQuery(self.vector_db, self.news_db)
         self.crawler = crawler(
             self.vector_db,
@@ -230,18 +230,19 @@ class ManualQuery(object):
         }
 
 class VectorDB:
-    INDEX_FILE_NAME = 'docs.index'
-    STORE_FILE_NAME = 'faiss_store.pkl'
-    def __init__(self):
+    def __init__(self, file_name_prefix):
         self.store = None
-        if not os.path.isfile(self.INDEX_FILE_NAME):
+        folder_name = ""
+        self.index_file_name = folder_name + file_name_prefix + 'docs.index'
+        self.store_file_name = folder_name + file_name_prefix + 'faiss_store.pkl'
+        if not os.path.isfile(self.index_file_name):
             init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)
         self.load_db()
 
     def load_db(self):
-        index = faiss.read_index(self.INDEX_FILE_NAME)
-        with open(self.STORE_FILE_NAME, "rb") as f:
+        index = faiss.read_index(self.index_file_name)
+        with open(self.store_file_name, "rb") as f:
             store = pickle.load(f)
             store.index = index
         self.store = store
@@ -260,8 +261,8 @@ class VectorDB:
     def save_db(self, store_obj=None):
         if not store_obj:
             store_obj = self.store
-        faiss.write_index(store_obj.index, self.INDEX_FILE_NAME)
+        faiss.write_index(store_obj.index, self.index_file_name)
         store_copy = copy.deepcopy(store_obj)
         store_copy.index = None
-        with open(self.STORE_FILE_NAME, 'wb') as f:
+        with open(self.store_file_name, 'wb') as f:
             pickle.dump(store_copy, f)

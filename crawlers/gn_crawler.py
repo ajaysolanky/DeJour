@@ -4,6 +4,7 @@ import pandas as pd
 from .base_crawler import BaseCrawler
 
 class GNCrawler(BaseCrawler):
+    crawler_prefix = "google_news_"
     def __init__(self, vector_db, news_db):
         super().__init__(vector_db, news_db)
         self.gn_client = GNews()

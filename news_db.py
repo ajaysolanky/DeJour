@@ -16,16 +16,17 @@ class NewsDB(object):
         'publish_date'
     ]
     TABLE_NAME = 'news_data'
-    DB_FILE_NAME = 'news.db'
 
-    def __init__(self):
+    def __init__(self, file_name_prefix):
+        folder_name = ""
+        self.db_file_name = folder_name + file_name_prefix + 'news.db'
         con = self.get_con()
         cur = con.cursor()
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")
         con.commit()
 
     def get_con(self):
-        return sqlite3.connect(self.DB_FILE_NAME)
+        return sqlite3.connect(self.db_file_name)
 
     def add_news_df(self, news_df):
         con = self.get_con()
