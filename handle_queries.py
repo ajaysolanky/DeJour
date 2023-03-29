@@ -16,27 +16,23 @@ CORS(app)
 def handle_query():
     new_query = request.args['query']
     session_id = request.args['session_id']
+    chat_history = chat_history_service.get_chat_history(session_id)
+    if chat_history is None:
+        chat_history = ""
     
-    query = get_full_query(session_id, new_query)
+    # Call your api with the chat history and the new query 
+
+    # Update chat history
+    chat_history_service.add_object_if_needed(session_id, chat_history + new_query)
 
     use_cache = request.args.get('use_cache', True)
     function = answer_query
     if use_cache:
         function = use_ghetto_disk_cache(function)
-    result = function(query)
+    result = function(new_query, chat_history)
     response = jsonify(result)
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
-
-def get_full_query(session_id, new_query):
-    chat_history = chat_history_service.get_chat_history(session_id)
-    if chat_history is None:
-        chat_history_service.add_object_if_needed(session_id, new_query)
-        query = new_query
-    else:
-        query = chat_history + " " + new_query
-        chat_history_service.add_object_if_needed(session_id, query)
-    return query
     
 def answer_query(query):
     return Runner(GNCrawler).get_result_manual(query)
