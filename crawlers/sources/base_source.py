@@ -33,15 +33,6 @@ class BaseSource(Source):
     #TODO: bring back multithreading
     def download_categories_selenium(self):
         # requests = network.multithread_request(category_urls, self.config)
-
-        for index, category in enumerate(self.categories):
-            self.categories[index].html = self.get_html_selenium(category.url)
-            # req = requests[index]
-        self.categories = [c for c in self.categories if c.html]
-
-    #TODO: probably don't have to re-download the driver every invocation
-    @staticmethod
-    def get_html_selenium(url, sleep_time=5):
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
@@ -50,6 +41,13 @@ class BaseSource(Source):
         options.add_argument("--disable-infobars")
         options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(ChromeDriverManager().install(),options=options)
+        for index, category in enumerate(self.categories):
+            self.categories[index].html = self.get_html_selenium(category.url, driver)
+            # req = requests[index]
+        self.categories = [c for c in self.categories if c.html]
+
+    @staticmethod
+    def get_html_selenium(url, driver, sleep_time=5):
         driver.get(url)
         time.sleep(sleep_time)
         html = driver.page_source

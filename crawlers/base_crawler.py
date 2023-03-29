@@ -30,6 +30,9 @@ class BaseCrawler:
 
         print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
 
+        if new_news_df.shape[0] == 0:
+            return None
+
         def augment_data(url):
             print (f"fetching article @ url: {url}")
             # article = self.get_article_obj_from_url(url)
@@ -104,4 +107,5 @@ class BaseCrawler:
     
     def full_update(self):
         new_news_df = self.fetch_news_df_filtered()
-        self.add_new_news_to_dbs(new_news_df)
+        if new_news_df:
+            self.add_new_news_to_dbs(new_news_df)
