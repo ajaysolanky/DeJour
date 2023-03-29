@@ -99,20 +99,22 @@ class Query:
         }
 
 class ChatQuery(Query):
-    CHAT_MODEL = 'gpt-4'
+    CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
+    CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
     def __init__(self, vector_db, news_db) -> None:
         self.vector_db = vector_db
         self.news_db = news_db
-        llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL)
-        question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
-        doc_chain = load_qa_with_sources_chain(llm, chain_type="stuff")
+        condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
+        answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
+        question_generator = LLMChain(llm=condense_llm, prompt=CONDENSE_QUESTION_PROMPT)
+        doc_chain = load_qa_with_sources_chain(answer_llm, chain_type="stuff")
         self.chain = ConversationalRetrievalChain(
             retriever=self.vector_db.store.as_retriever(),
             question_generator=question_generator,
             combine_docs_chain=doc_chain,
             verbose=True
         )
-    
+
     def answer_query_with_context(self, chat_history, query):
         """
         inputs:
