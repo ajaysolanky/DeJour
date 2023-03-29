@@ -13,6 +13,8 @@ flask
 pandas
 attrdict
 flask_cors
+selenium
+webdriver_manager
 #en_core_web_sm
 #unidecode
 #chromadb

@@ -8,7 +8,7 @@ class SourceCrawler(BaseCrawler):
         self.source = source
 
     def fetch_news_df(self):
-        source_build = self.source.get_build()
+        source_build = self.source.get_build(memoize_articles=False)
         articles = source_build.articles
 
         print(f"fetched {len(articles)} articles")

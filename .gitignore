@@ -1,9 +1,10 @@
 __pycache__/
 test_script.py
-faiss_store.pkl
+*faiss_store.pkl
 *.db
-docs.index
+*docs.index
 venv/
 disk_cache_dir/
 .chroma/
 db/
+.DS_Store
