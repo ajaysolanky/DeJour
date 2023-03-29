@@ -49,6 +49,8 @@ def answer_query(chat_history, query, source):
         return Runner(GNCrawler, "google_news").get_chat_result(chat_history, query)
     elif source == "atlanta_dunia":
         return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "atlanta_dunia").get_chat_result(chat_history, query)
+    elif source == "techcrunch":
+        return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "techcrunch").get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
     

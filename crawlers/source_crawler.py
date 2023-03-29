@@ -5,10 +5,11 @@ from .base_crawler import BaseCrawler
 class SourceCrawler(BaseCrawler):
     def __init__(self, source, vector_db, news_db):
         super().__init__(vector_db, news_db)
-        self.source_build = source.get_build()
+        self.source = source
 
     def fetch_news_df(self):
-        articles = self.source_build.articles
+        source_build = self.source.get_build()
+        articles = source_build.articles
 
         print(f"fetched {len(articles)} articles")
 
