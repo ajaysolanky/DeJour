@@ -15,7 +15,9 @@ class BaseSource(Source):
         """Returns a constructed source object without
         downloading or parsing the articles
         """
-        config = config or Configuration()
+        default_config = Configuration()
+        default_config.memoize_articles = False
+        config = config or default_config
         config = extend_config(config, kwargs)
         url = url or cls.BASE_URL
         s = cls(url, config=config)

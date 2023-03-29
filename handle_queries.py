@@ -5,6 +5,7 @@ from utils import use_ghetto_disk_cache
 from crawlers.gn_crawler import GNCrawler
 from crawlers.source_crawler import SourceCrawler
 from utilities.memory_cache import ChatHistoryMemoryService
+from utilities.html_reader import HTMLReader
 
 app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
@@ -58,3 +59,4 @@ def answer_query(chat_history, query, source):
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
     print("Starting server...")
+    # html_reader = HTMLReader()

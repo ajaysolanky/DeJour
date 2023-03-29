@@ -5,18 +5,21 @@ from crawlers.source_crawler import SourceCrawler
 from crawlers.sources.atlanta_dunia_source import ADSource
 from crawlers.sources.techcrunch_source import TechCrunchSource
 from crawlers.sources.vice_source import ViceSource
+from crawlers.sources.sfstandard_source import SFStandardSource
 
 google_news_prefix = "google_news"
 atlanta_dunia_prefix = "atlanta_dunia"
 techcrunch_prefix = "techcrunch"
 vice_prefix = "vice"
+sf_standard_prefix = "sf_standard"
 
 def run_crawler(crawler_name):
     crawler_dict = {
         google_news_prefix: run_gn_crawler,
         atlanta_dunia_prefix: run_atlanta_dunia_crawler,
         techcrunch_prefix: run_techcrunch_crawler,
-        vice_prefix: run_vice_crawler
+        vice_prefix: run_vice_crawler,
+        sf_standard_prefix: run_sf_standard_crawler,
     }
     crawler_dict[crawler_name]()
 
@@ -34,6 +37,9 @@ def run_techcrunch_crawler():
 
 def run_vice_crawler():
     run_source_crawler(ViceSource, vice_prefix)
+
+def run_sf_standard_crawler():
+    run_source_crawler(SFStandardSource, sf_standard_prefix)
 
 if __name__ == '__main__':
     args = sys.argv[1:]
