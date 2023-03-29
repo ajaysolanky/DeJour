@@ -7,7 +7,12 @@ class ViceSource(BaseSource):
     USE_SELENIUM = True
 
     def set_categories(self):
-        self.categories = [Category(url='https://www.vice.com/en/section/news')]
+        category_urls = [
+            'https://www.vice.com/en/section/news',
+            'https://www.vice.com/en/section/tech',
+            'https://www.vice.com/en/section/world'
+        ]
+        self.categories = [Category(url=url) for url in category_urls]
 
     def purge_articles(self, reason, articles):
         if reason == 'url':
