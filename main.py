@@ -21,8 +21,12 @@ import faiss
 import openai
 from langchain import OpenAI
 from langchain.chains import VectorDBQAWithSourcesChain
+from langchain.chains import ConversationalRetrievalChain
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.docstore.document import Document
+from langchain.chains.chat_vector_db.prompts import CONDENSE_QUESTION_PROMPT
+from langchain.chains.qa_with_sources import load_qa_with_sources_chain
+from langchain.chains import LLMChain
 import pickle
 from langchain.vectorstores import FAISS
 import time
@@ -51,6 +55,7 @@ class Runner(object):
             llm=OpenAI(temperature=0),
             vectorstore=self.vector_db.store
             )
+        self.cq = ChatQuery(self.vector_db)
 
     def run_crawler(self):
         while True:
@@ -74,6 +79,45 @@ class Runner(object):
             source_str = "\n".join(result['sources'])
             output = f"\nAnswer: {result['answer']}\n\nSources: {source_str}"
             print(output)
+    
+    def get_chat_result(self, chat_history, query):
+        return self.cq.get_result(chat_history, query)
+
+class ChatQuery(object):
+    CHAT_MODEL = 'gpt-4'
+    def __init__(self, vector_db) -> None:
+        self.vector_db = vector_db
+        llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL)
+        question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
+        doc_chain = load_qa_with_sources_chain(llm, chain_type="stuff")
+        self.chain = ConversationalRetrievalChain(
+            retriever=self.vector_db.store.as_retriever(),
+            question_generator=question_generator,
+            combine_docs_chain=doc_chain,
+            verbose=True
+        )
+    
+    def get_result(self, chat_history, query):
+        """
+        inputs:
+        chat_history: [(question1, answer1), (question2, answer2), ...]
+        query: <string>
+        returns: (<answer string>, <src list>)
+        """
+        answer_and_src = self.chain({
+            "question": query,
+            "chat_history": chat_history
+        })['answer']
+        src_identifier = "SOURCES:"
+        src_idx = answer_and_src.index(src_identifier)
+        if src_idx:
+            answer = answer_and_src[:src_idx]
+            src_str = answer_and_src[src_idx + len(src_identifier):]
+            sources = [s.strip() for s in src_str.split(',')]
+        else:
+            answer = answer_and_src
+            sources = []
+        return answer, sources
 
 class ManualQuery(object):
     SEPARATOR = "\n* "
