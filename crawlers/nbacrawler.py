@@ -51,7 +51,7 @@ class NBACrawler(BaseCrawler):
         source_build = self.source.get_build(memoize_articles=False, dry=False)
         articles = source_build.articles
         for article in articles:
-            if article.url is None or article.url is "":
+            if article.url is None or article.url == "":
                 print("skipping article with no url")
                 continue
             if "/video" in article.url:

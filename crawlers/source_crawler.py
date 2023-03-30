@@ -21,10 +21,10 @@ class SourceCrawler(BaseCrawler):
             if "video" in a.url:
                 continue
             # pdb.set_trace()
-            if a.url is None or a.url is "":
+            if a.url is None or a.url == "":
                 print("skipping article with no url")
                 continue
-            if a.title is None or a.title is "":
+            if a.title is None or a.title == "":
                 print(f"skipping article with no title. Url: {a.url}")
                 continue
             all_news.append({
