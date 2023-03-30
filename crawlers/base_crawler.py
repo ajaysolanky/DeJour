@@ -1,6 +1,5 @@
 import pandas as pd
 from collections import defaultdict
-from attrdict import AttrDict
 from newspaper import Article
 
 from text_splitter import HardTokenSpacyTextSplitter
@@ -32,7 +31,7 @@ class BaseCrawler:
             except:
                 article = None
             if article is None:
-                article = AttrDict()
+                article = object()
             return pd.Series({
                 "text": getattr(article, "text", None),
                 "preview": None,
@@ -110,5 +109,5 @@ class BaseCrawler:
     
     def full_update(self):
         new_news_df = self.fetch_news_df_filtered()
-        # if new_news_df:
-        self.add_new_news_to_dbs(new_news_df)
+        if new_news_df is not None:
+            self.add_new_news_to_dbs(new_news_df)

@@ -15,6 +15,7 @@ class SourceCrawler(BaseCrawler):
 
         all_news = []
         for a in articles:
+            #TODO: article is dled twice
             a.download()
             a.parse()
             if "video" in a.url:
