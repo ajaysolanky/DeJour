@@ -43,7 +43,6 @@ class BaseCrawler:
     def fetch_news_df_filtered(self):
         news_df = self.fetch_news_df()
 
-        pdb.set_trace()
         matched_artcles = self.news_db.get_matched_articles(news_df.url)
 
         new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]

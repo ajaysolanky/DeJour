@@ -20,7 +20,6 @@ class SourceCrawler(BaseCrawler):
             a.parse()
             if "video" in a.url:
                 continue
-            # pdb.set_trace()
             if a.url is None or a.url == "":
                 print("skipping article with no url")
                 continue
