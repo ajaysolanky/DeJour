@@ -127,7 +127,10 @@ class ChatQuery(Query):
             "chat_history": chat_history
         })['answer']
         src_identifier = "SOURCES:"
-        src_idx = answer_and_src.index(src_identifier)
+        try:
+            src_idx = answer_and_src.index(src_identifier)
+        except: #ValueError
+            src_idx = None
         if src_idx:
             answer = answer_and_src[:src_idx]
             src_str = answer_and_src[src_idx + len(src_identifier):]

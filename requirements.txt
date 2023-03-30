@@ -11,10 +11,10 @@ tiktoken
 clean-text
 flask
 pandas
-attrdict
 flask_cors
 selenium
 webdriver_manager
+newspaper3k==0.2.8
 #en_core_web_sm
 #unidecode
 #chromadb
