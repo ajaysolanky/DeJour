@@ -4,6 +4,7 @@ from flask_cors import CORS, cross_origin
 from utils import use_ghetto_disk_cache
 from crawlers.gn_crawler import GNCrawler
 from crawlers.source_crawler import SourceCrawler
+from crawlers.nbacrawler import NBACrawler
 from utilities.memory_cache import ChatHistoryMemoryService
 from utilities.html_reader import HTMLReader
 
@@ -54,6 +55,8 @@ def answer_query(chat_history, query, source):
         return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "techcrunch").get_chat_result(chat_history, query)
     elif source == "vice":
         return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "vice").get_chat_result(chat_history, query)
+    elif source == "nba":
+        return Runner(lambda vdb, ndb: NBACrawler(source, vdb, ndb), "nba").get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
 

@@ -11,7 +11,6 @@ class GNCrawler(BaseCrawler):
 
     def fetch_news_df(self):
         top_news = self.gn_client.get_top_news()
-
         topics = [
             'WORLD',
             'NATION',

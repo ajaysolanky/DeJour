@@ -23,7 +23,6 @@ class BaseSource(Source):
         s = cls(url, config=config)
         if not dry:
             s.build()
-        # pdb.set_trace()
         return s
 
     def download_categories(self):

@@ -5,6 +5,7 @@ from newspaper import Article
 
 from text_splitter import HardTokenSpacyTextSplitter
 from utils import HiddenPrints, TokenCountCalculator
+import pdb
 
 class BaseCrawler:
     CHUNK_SIZE_TOKENS = 300
@@ -20,20 +21,8 @@ class BaseCrawler:
 
     def fetch_news_df(self):
         raise NotImplementedError()
-
-    def fetch_news_df_filtered(self):
-        news_df = self.fetch_news_df()
-
-        matched_artcles = self.news_db.get_matched_articles(news_df.url)
-
-        new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]
-
-        print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
-
-        if new_news_df.shape[0] == 0:
-            return None
-
-        def augment_data(url):
+    
+    def augment_data(self, url):
             print (f"fetching article @ url: {url}")
             # article = self.get_article_obj_from_url(url)
             article = Article(url=url)
@@ -51,8 +40,22 @@ class BaseCrawler:
                 "authors": ','.join(getattr(article, "authors", [])),
                 "publish_date": getattr(article, "publish_date", None)
             })
+    
+    def fetch_news_df_filtered(self):
+        news_df = self.fetch_news_df()
 
-        fetched_data = new_news_df.url.apply(augment_data)
+        pdb.set_trace()
+        matched_artcles = self.news_db.get_matched_articles(news_df.url)
+
+        new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]
+
+        print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
+
+        if new_news_df.shape[0] == 0:
+            return None
+
+
+        fetched_data = new_news_df.url.apply(self.augment_data)
         new_news_df = new_news_df.join(fetched_data)
 
         self.failed_dl_cache |= set(new_news_df[new_news_df['text'].isna()].url)
@@ -107,5 +110,5 @@ class BaseCrawler:
     
     def full_update(self):
         new_news_df = self.fetch_news_df_filtered()
-        if new_news_df:
-            self.add_new_news_to_dbs(new_news_df)
+        # if new_news_df:
+        self.add_new_news_to_dbs(new_news_df)
