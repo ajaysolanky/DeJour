@@ -24,7 +24,7 @@ from langchain.chains import VectorDBQAWithSourcesChain
 from langchain.chains import ConversationalRetrievalChain
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.docstore.document import Document
-from langchain.chains.chat_vector_db.prompts import CONDENSE_QUESTION_PROMPT
+from langchain.chains.chat_vector_db.prompts import PromptTemplate#, CONDENSE_QUESTION_PROMPT
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from langchain.chains import LLMChain
 import pickle
@@ -101,13 +101,21 @@ class Query:
 class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
+
+    CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template("""A human is catching up on the news by having a conversation with a news assistant. Given the following conversation and a follow up input, rephrase the follow up input to be a standalone question.
+
+Chat History:
+{chat_history}
+Follow Up Input: {question}
+Standalone question:""")
+
     def __init__(self, vector_db, news_db) -> None:
         self.vector_db = vector_db
         self.news_db = news_db
         condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
-        question_generator = LLMChain(llm=condense_llm, prompt=CONDENSE_QUESTION_PROMPT)
-        doc_chain = load_qa_with_sources_chain(answer_llm, chain_type="stuff")
+        question_generator = LLMChain(llm=condense_llm, prompt=self.CONDENSE_QUESTION_PROMPT, verbose=True)
+        doc_chain = load_qa_with_sources_chain(answer_llm, chain_type="stuff", verbose=True)
         self.chain = ConversationalRetrievalChain(
             retriever=self.vector_db.store.as_retriever(),
             question_generator=question_generator,
@@ -126,11 +134,13 @@ class ChatQuery(Query):
             "question": query,
             "chat_history": chat_history
         })['answer']
-        src_identifier = "SOURCES:"
-        try:
-            src_idx = answer_and_src.index(src_identifier)
-        except: #ValueError
-            src_idx = None
+        src_identifiers = ["SOURCES:", "Sources:"]
+        for src_identifier in src_identifiers:
+            try:
+                src_idx = answer_and_src.index(src_identifier)
+                break
+            except: #ValueError
+                src_idx = None
         if src_idx:
             answer = answer_and_src[:src_idx]
             src_str = answer_and_src[src_idx + len(src_identifier):]
@@ -138,7 +148,7 @@ class ChatQuery(Query):
         else:
             answer = answer_and_src
             source_urls = []
-        return self.return_answer_with_src_data(answer, source_urls)
+        return self.return_answer_with_src_data(answer, list(set(source_urls)))
 
 #TODO: use Query parent class
 class ManualQuery(object):

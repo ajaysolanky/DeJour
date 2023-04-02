@@ -12,7 +12,13 @@ app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
 
-# helpful tut for setting up ec2: https://www.twilio.com/blog/deploy-flask-python-app-aws
+runner_dict = {
+    "google_news": Runner(GNCrawler, "google_news"),
+    "atlanta_dunia": Runner(lambda vdb, ndb: SourceCrawler("atlanta_dunia", vdb, ndb), "atlanta_dunia"),
+    "techcrunch": Runner(lambda vdb, ndb: SourceCrawler("techcrunch", vdb, ndb), "techcrunch"),
+    "vice": Runner(lambda vdb, ndb: SourceCrawler("vice", vdb, ndb), "vice"),
+    "nba": Runner(lambda vdb, ndb: NBACrawler("nba", vdb, ndb), "nba")
+}
 
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
@@ -46,17 +52,9 @@ def handle_query():
     return response
     
 def answer_query(chat_history, query, source):
-    #TODO: Define these ass a global dict
-    if source == "google_news":
-        return Runner(GNCrawler, "google_news").get_chat_result(chat_history, query)
-    elif source == "atlanta_dunia":
-        return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "atlanta_dunia").get_chat_result(chat_history, query)
-    elif source == "techcrunch":
-        return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "techcrunch").get_chat_result(chat_history, query)
-    elif source == "vice":
-        return Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), "vice").get_chat_result(chat_history, query)
-    elif source == "nba":
-        return Runner(lambda vdb, ndb: NBACrawler(source, vdb, ndb), "nba").get_chat_result(chat_history, query)
+    runner = runner_dict.get(source)
+    if runner:
+        return runner.get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
 
