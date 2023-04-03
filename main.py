@@ -1,18 +1,15 @@
 # TODO: same article can be pulled twice in the same "new_news_df" df from diff sources
 # TODO: safeguard against same vector getting added twice
-# TODO: investigate how langchain is doing Q+A
 # TODO: clean out muck from photo captions and other random garbage
 # TODO: same text chunk is getting added twice
-# TODO: wtf is this: `WARNING: Created a chunk of size 3072, which is longer than the specified 1500`
 # TODO: delete old news
-# TODO: filter photo captions
 # TODO: try SpacyTextSplitter
 # TODO: are there race conditions with the vector store?
 # TODO: exponentially decay old answers
-# TODO: periodically reload the db in the query thread
 # TODO: experiment with chunk overlap
 
 import copy
+import json
 import os
 import threading
 from datetime import datetime
@@ -33,6 +30,7 @@ import time
 import nltk
 import numpy as np
 import tiktoken
+from chains.dejour_stuff_documents_chain import DejourStuffDocumentsChain
 
 # from embeddings_model import EmbeddingsModel
 from utils import TokenCountCalculator
@@ -102,26 +100,38 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template("""A human is catching up on the news by having a conversation with a news assistant. Given the following conversation and a follow up input, rephrase the follow up input to be a standalone question.
-
-Chat History:
-{chat_history}
-Follow Up Input: {question}
-Standalone question:""")
-
     def __init__(self, vector_db, news_db) -> None:
         self.vector_db = vector_db
         self.news_db = news_db
+        self.condense_question_prompt = self.load_prompt_from_json('./prompts/condense_question_prompt.json')
+        self.answer_question_prompt = self.load_prompt_from_json('./prompts/answer_question_prompt.json')
+        self.document_prompt = self.load_prompt_from_json('./prompts/document_prompt.json')
         condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
-        question_generator = LLMChain(llm=condense_llm, prompt=self.CONDENSE_QUESTION_PROMPT, verbose=True)
-        doc_chain = load_qa_with_sources_chain(answer_llm, chain_type="stuff", verbose=True)
+        question_generator = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
+        doc_chain = DejourStuffDocumentsChain(
+            llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=True),
+            document_variable_name="summaries",
+            document_prompt=self.document_prompt,
+            verbose=True
+        )
+        # doc_chain = load_qa_with_sources_chain(
+        #     answer_llm,
+        #     chain_type="stuff",
+        #     prompt=self.answer_question_prompt,
+        #     document_prompt=self.document_prompt,
+        #     verbose=True)
         self.chain = ConversationalRetrievalChain(
             retriever=self.vector_db.store.as_retriever(),
             question_generator=question_generator,
             combine_docs_chain=doc_chain,
             verbose=True
         )
+
+    @staticmethod
+    def load_prompt_from_json(fpath):
+        with open(fpath) as f:
+            return PromptTemplate.from_template(json.load(f)['template'])
 
     def answer_query_with_context(self, chat_history, query):
         """

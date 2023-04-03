@@ -1,6 +1,9 @@
 import os, sys
 import tiktoken
 import json
+import pytz
+from datetime import datetime
+from dateutil import parser
 
 class HiddenPrints:
     def __enter__(self):
@@ -66,3 +69,13 @@ def use_ghetto_disk_cache(func):
         gdc.save_to_cache(result, *args)
         return result
     return wrapper
+
+def get_structured_time_string_from_dt(dt):
+    return dt.strftime('%a, %b %d, %Y %I:%M%p')
+
+def get_current_structured_time_string():
+    et_dt = pytz.utc.localize(datetime.utcnow()).astimezone(pytz.timezone('America/New_York'))
+    return get_structured_time_string_from_dt(et_dt)
+
+def unstructured_time_string_to_structured(unstructured_time_string):
+    return get_structured_time_string_from_dt(parser.parse(unstructured_time_string))

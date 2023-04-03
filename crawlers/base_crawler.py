@@ -1,10 +1,11 @@
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article
+from datetime import datetime
+import pytz
 
 from text_splitter import HardTokenSpacyTextSplitter
-from utils import HiddenPrints, TokenCountCalculator
-import pdb
+from utils import HiddenPrints, TokenCountCalculator, get_structured_time_string_from_dt
 
 class BaseCrawler:
     CHUNK_SIZE_TOKENS = 300
@@ -37,7 +38,8 @@ class BaseCrawler:
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
-                "publish_date": getattr(article, "publish_date", None)
+                "publish_date": str(getattr(article, "publish_date", None)) if getattr(article, "publish_date", None) else None,
+                "fetch_date": str(pytz.utc.localize(datetime.utcnow()))
             })
     
     def fetch_news_df_filtered(self):
@@ -84,7 +86,13 @@ class BaseCrawler:
             splits = text_splitter.split_text(r.text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
-            metadatas.extend([{"source": r.url}] * len(splits))
+            pt_input = r.publish_date if r.publish_date else r.fetch_date
+            pt_str = get_structured_time_string_from_dt(pt_input) if pt_input else None
+            metadata = {
+                "source": r.url,
+                "publish_time": pt_str,
+            }
+            metadatas.extend([metadata] * len(splits))
             orig_idces.extend([i] * len(splits))
         
         print("adding texts to VectorDB")
@@ -105,7 +113,7 @@ class BaseCrawler:
         print("adding news to news db")
         self.news_db.add_news_df(copy_df)
         print("finished adding news to news db")
-    
+
     def full_update(self):
         new_news_df = self.fetch_news_df_filtered()
         if new_news_df is not None:

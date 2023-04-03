@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+import pytz
+
+# to read dates from db: https://stackoverflow.com/questions/3305413/how-to-preserve-timezone-when-parsing-date-time-strings-with-strptime
 class NewsDB(object):
     COLUMNS = [
         'title',
@@ -35,7 +38,6 @@ class NewsDB(object):
         existing_table_columns = [c[1] for c in table_info]
 
         copy_df = news_df.copy()
-        copy_df['fetch_date'] = datetime.now().strftime('%Y-%m-%d')
         for tc in existing_table_columns:
             if tc not in copy_df.columns:
                 copy_df[tc] = None
