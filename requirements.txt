@@ -14,8 +14,8 @@ pandas
 flask_cors
 selenium
 webdriver_manager
-selenium
 newspaper3k==0.2.8
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0.tar.gz
 #en_core_web_sm
 #unidecode
 #chromadb

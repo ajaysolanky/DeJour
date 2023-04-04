@@ -11,7 +11,7 @@
 import copy
 import json
 import os
-import threading
+import re
 from datetime import datetime
 import pandas as pd
 import faiss
@@ -125,6 +125,7 @@ class ChatQuery(Query):
             retriever=self.vector_db.store.as_retriever(),
             question_generator=question_generator,
             combine_docs_chain=doc_chain,
+            return_source_documents=True,
             verbose=True
         )
 
@@ -140,24 +141,40 @@ class ChatQuery(Query):
         query: <str>
         returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
         """
-        answer_and_src = self.chain({
+        chain_resp = self.chain({
             "question": query,
             "chat_history": chat_history
-        })['answer']
-        src_identifiers = ["SOURCES:", "Sources:"]
-        for src_identifier in src_identifiers:
-            try:
-                src_idx = answer_and_src.index(src_identifier)
-                break
-            except: #ValueError
-                src_idx = None
+        })
+        answer_and_src_idces = chain_resp['answer']
+        source_docs = chain_resp['source_documents']
+        src_identifier = "SOURCES:"
+        try:
+            src_idx = answer_and_src_idces.lower().index(src_identifier.lower())
+        except: #ValueError
+            src_idx = None
         if src_idx:
-            answer = answer_and_src[:src_idx]
-            src_str = answer_and_src[src_idx + len(src_identifier):]
-            source_urls = [s.strip() for s in src_str.split(',')]
+            answer = answer_and_src_idces[:src_idx]
+            src_str = answer_and_src_idces[src_idx + len(src_identifier):]
+            def extract_idx(idx_str):
+                #TODO: move this somewhere central and consolidate w/ the code in dejour_stuff_documents_chain.py
+                idx_pattern = r'^\[(\d+)\]$'
+                result = re.match(idx_pattern, idx_str)
+                if result:
+                    try:
+                        return int(result.group(1))
+                    except:
+                        pass
+                return None
+
+            source_idces = [extract_idx(s.strip()) for s in src_str.split(',')]
+            source_idces = list(filter(lambda x: x is not None, source_idces))
         else:
-            answer = answer_and_src
-            source_urls = []
+            answer = answer_and_src_idces
+            source_idces = []
+        source_idx_dict = dict(enumerate(source_docs))
+        source_docs = [source_idx_dict.get(idx) for idx in source_idces]
+        source_docs = list(filter(lambda x: x is not None, source_docs))
+        source_urls = [d.metadata.get('source') for d in source_docs]
         return self.return_answer_with_src_data(answer, list(set(source_urls)))
 
 #TODO: use Query parent class

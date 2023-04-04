@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 
 from text_splitter import HardTokenSpacyTextSplitter
-from utils import HiddenPrints, TokenCountCalculator, get_structured_time_string_from_dt
+from utils import HiddenPrints, TokenCountCalculator, unstructured_time_string_to_structured
 
 class BaseCrawler:
     CHUNK_SIZE_TOKENS = 300
@@ -87,7 +87,7 @@ class BaseCrawler:
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
             pt_input = r.publish_date if r.publish_date else r.fetch_date
-            pt_str = get_structured_time_string_from_dt(pt_input) if pt_input else None
+            pt_str = unstructured_time_string_to_structured(pt_input) if pt_input else None
             metadata = {
                 "source": r.url,
                 "publish_time": pt_str,

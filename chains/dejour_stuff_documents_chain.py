@@ -6,13 +6,14 @@ from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from utils import get_current_structured_time_string
 
 class DejourStuffDocumentsChain(StuffDocumentsChain):
-    # the only things I've changed are that it doesn't just commit suicide if a field is missing and it also adds today's date as an input
+    #things I've changed: (A) it doesn't just commit suicide if a field is missing (B) it adds today's date as an input (C) uses index as source
     def _get_inputs(self, docs: List[Document], **kwargs: Any) -> dict:
         # Get relevant information from each document.
         doc_dicts = []
-        for doc in docs:
+        for i, doc in enumerate(docs):
             base_info = {"page_content": doc.page_content}
             base_info.update(doc.metadata)
+            base_info['source'] = f"[{i}]"
             document_info = {
                 k: base_info.get(k,'UNKNOWN') for k in self.document_prompt.input_variables
             }
