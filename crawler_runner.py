@@ -1,4 +1,5 @@
 import sys
+
 from main import Runner
 from crawlers.gn_crawler import GNCrawler
 from crawlers.source_crawler import SourceCrawler
@@ -8,45 +9,39 @@ from crawlers.sources.vice_source import ViceSource
 from crawlers.sources.sfstandard_source import SFStandardSource
 from crawlers.sources.nba_source import NBASource
 from crawlers.nbacrawler import NBACrawler
-
-google_news_prefix = "google_news"
-atlanta_dunia_prefix = "atlanta_dunia"
-techcrunch_prefix = "techcrunch"
-vice_prefix = "vice"
-sf_standard_prefix = "sf_standard"
-nba_prefix = "nba"
+from publisher_enum import PublisherEnum
 
 def run_crawler(crawler_name):
     crawler_dict = {
-        google_news_prefix: run_gn_crawler,
-        atlanta_dunia_prefix: run_atlanta_dunia_crawler,
-        techcrunch_prefix: run_techcrunch_crawler,
-        vice_prefix: run_vice_crawler,
-        sf_standard_prefix: run_sf_standard_crawler,
-        nba_prefix: run_nba_crawler
+        PublisherEnum.ATLANTA_DUNIA : run_atlanta_dunia_crawler,
+        PublisherEnum.GOOGLE_NEWS : run_gn_crawler,
+        PublisherEnum.NBA : run_nba_crawler,
+        PublisherEnum.SF_STANDARD : run_sf_standard_crawler,
+        PublisherEnum.TECHCRUNCH : run_techcrunch_crawler,
+        PublisherEnum.VICE : run_vice_crawler,
     }
-    crawler_dict[crawler_name]()
+    crawler_dict[PublisherEnum(crawler_name)]()
 
 def run_gn_crawler():
-    Runner(GNCrawler, google_news_prefix).run_crawler()
+    Runner(GNCrawler, PublisherEnum.GOOGLE_NEWS).run_crawler()
 
 def run_source_crawler(source, prefix):
     Runner(lambda vdb, ndb: SourceCrawler(source, vdb, ndb), prefix).run_crawler()
 
 def run_atlanta_dunia_crawler():
-    run_source_crawler(ADSource, atlanta_dunia_prefix)
+    run_source_crawler(ADSource, PublisherEnum.ATLANTA_DUNIA)
 
 def run_techcrunch_crawler():
-    run_source_crawler(TechCrunchSource, techcrunch_prefix)
+    run_source_crawler(TechCrunchSource, PublisherEnum.TECHCRUNCH)
 
 def run_vice_crawler():
-    run_source_crawler(ViceSource, vice_prefix)
+    run_source_crawler(ViceSource, PublisherEnum.VICE)
 
 def run_sf_standard_crawler():
-    run_source_crawler(SFStandardSource, sf_standard_prefix)
+    run_source_crawler(SFStandardSource, PublisherEnum.SF_STANDARD)
 
 def run_nba_crawler(): 
-    Runner(lambda vdb, ndb: NBACrawler(NBASource, vdb, ndb), nba_prefix).run_crawler()
+    Runner(lambda vdb, ndb: NBACrawler(NBASource, vdb, ndb), PublisherEnum.NBA).run_crawler()
 
 if __name__ == '__main__':
     args = sys.argv[1:]

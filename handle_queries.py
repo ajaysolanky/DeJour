@@ -7,17 +7,19 @@ from crawlers.source_crawler import SourceCrawler
 from crawlers.nbacrawler import NBACrawler
 from utilities.memory_cache import ChatHistoryMemoryService
 from utilities.html_reader import HTMLReader
+from publisher_enum import PublisherEnum
 
 app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
 
+#TODO: shouldn't need to put in the enum 3 times, this can be cleaned up
 runner_dict = {
-    "google_news": Runner(GNCrawler, "google_news"),
-    "atlanta_dunia": Runner(lambda vdb, ndb: SourceCrawler("atlanta_dunia", vdb, ndb), "atlanta_dunia"),
-    "techcrunch": Runner(lambda vdb, ndb: SourceCrawler("techcrunch", vdb, ndb), "techcrunch"),
-    "vice": Runner(lambda vdb, ndb: SourceCrawler("vice", vdb, ndb), "vice"),
-    "nba": Runner(lambda vdb, ndb: NBACrawler("nba", vdb, ndb), "nba")
+    PublisherEnum.ATLANTA_DUNIA: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.ATLANTA_DUNIA, vdb, ndb), PublisherEnum.ATLANTA_DUNIA),
+    PublisherEnum.GOOGLE_NEWS: Runner(GNCrawler, PublisherEnum.GOOGLE_NEWS),
+    PublisherEnum.NBA: Runner(lambda vdb, ndb: NBACrawler(PublisherEnum.NBA, vdb, ndb), PublisherEnum.NBA),
+    PublisherEnum.TECHCRUNCH: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.TECHCRUNCH, vdb, ndb), PublisherEnum.TECHCRUNCH),
+    PublisherEnum.VICE: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.VICE, vdb, ndb), PublisherEnum.VICE),
 }
 
 @app.route('/query', methods=['GET'])
@@ -39,6 +41,7 @@ def handle_query():
 
     use_cache = request.args.get('use_cache', True)
     function = answer_query
+
     # if use_cache:
     #     function = use_ghetto_disk_cache(function)
     result = function(chat_history, new_query, source)
@@ -52,7 +55,7 @@ def handle_query():
     return response
     
 def answer_query(chat_history, query, source):
-    runner = runner_dict.get(source)
+    runner = runner_dict.get(PublisherEnum(source))
     if runner:
         return runner.get_chat_result(chat_history, query)
     else:

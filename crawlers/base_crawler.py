@@ -38,8 +38,8 @@ class BaseCrawler:
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
-                "publish_date": str(getattr(article, "publish_date", None)) if getattr(article, "publish_date", None) else None,
-                "fetch_date": str(pytz.utc.localize(datetime.utcnow()))
+                "publish_timestamp": str(getattr(article, "publish_date", None)) if getattr(article, "publish_date", None) else None,
+                "fetch_timestamp": str(pytz.utc.localize(datetime.utcnow()))
             })
     
     def fetch_news_df_filtered(self):
@@ -86,11 +86,11 @@ class BaseCrawler:
             splits = text_splitter.split_text(r.text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
-            pt_input = r.publish_date if r.publish_date else r.fetch_date
-            pt_str = unstructured_time_string_to_structured(pt_input) if pt_input else None
             metadata = {
+                "title": r.title,
                 "source": r.url,
-                "publish_time": pt_str,
+                "publish_timestamp": unstructured_time_string_to_structured(r.publish_timestamp) if r.publish_timestamp else None,
+                "fetch_timestamp": unstructured_time_string_to_structured(r.fetch_timestamp) if r.fetch_timestamp else None,
             }
             metadatas.extend([metadata] * len(splits))
             orig_idces.extend([i] * len(splits))

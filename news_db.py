@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-import pytz
+from publisher_enum import PublisherEnum
 
 # to read dates from db: https://stackoverflow.com/questions/3305413/how-to-preserve-timezone-when-parsing-date-time-strings-with-strptime
 class NewsDB(object):
@@ -20,9 +20,9 @@ class NewsDB(object):
     ]
     TABLE_NAME = 'news_data'
 
-    def __init__(self, file_name_prefix):
+    def __init__(self, publisher: PublisherEnum):
         folder_name = ""
-        self.db_file_name = folder_name + file_name_prefix + "_" + 'news.db'
+        self.db_file_name = folder_name + publisher.value + "_" + 'news.db'
         con = self.get_con()
         cur = con.cursor()
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")
