@@ -6,6 +6,7 @@ from langchain import OpenAI
 from langchain.chains import LLMChain
 from langchain.docstore.document import Document
 from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import ChatVectorDBChain
 from langchain.chains.chat_vector_db.prompts import PromptTemplate
 
 from chains.dejour_stuff_documents_chain import DejourStuffDocumentsChain
@@ -38,17 +39,24 @@ class ChatQuery(Query):
         self.document_prompt = self.load_prompt_from_json('./prompts/document_prompt.json')
         condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
-        question_generator = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
+        condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
         doc_chain = DejourStuffDocumentsChain(
             llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=True),
             document_variable_name="summaries",
             document_prompt=self.document_prompt,
             verbose=True
         )
-        self.chain = ConversationalRetrievalChain(
-            retriever=self.vector_db.store.as_retriever(),
-            question_generator=question_generator,
+        # self.chain = ConversationalRetrievalChain(
+        #     retriever=self.vector_db.get_retriever(),
+        #     question_generator=condense_question_chain,
+        #     combine_docs_chain=doc_chain,
+        #     return_source_documents=True,
+        #     verbose=True
+        # )
+        self.chain = ChatVectorDBChain(
+            vectorstore=self.vector_db.get_vectorstore(),
             combine_docs_chain=doc_chain,
+            question_generator=condense_question_chain,
             return_source_documents=True,
             verbose=True
         )

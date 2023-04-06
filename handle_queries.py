@@ -13,13 +13,13 @@ app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
 
-#TODO: shouldn't need to put in the enum 3 times, this can be cleaned up
+#TODO: clean this up
 runner_dict = {
-    PublisherEnum.ATLANTA_DUNIA: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.ATLANTA_DUNIA, vdb, ndb), PublisherEnum.ATLANTA_DUNIA),
-    PublisherEnum.GOOGLE_NEWS: Runner(GNCrawler, PublisherEnum.GOOGLE_NEWS),
-    PublisherEnum.NBA: Runner(lambda vdb, ndb: NBACrawler(PublisherEnum.NBA, vdb, ndb), PublisherEnum.NBA),
-    PublisherEnum.TECHCRUNCH: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.TECHCRUNCH, vdb, ndb), PublisherEnum.TECHCRUNCH),
-    PublisherEnum.VICE: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.VICE, vdb, ndb), PublisherEnum.VICE),
+    PublisherEnum.ATLANTA_DUNIA: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.ATLANTA_DUNIA, vdb, ndb), PublisherEnum.ATLANTA_DUNIA),
+    PublisherEnum.GOOGLE_NEWS: lambda: Runner(GNCrawler, PublisherEnum.GOOGLE_NEWS),
+    PublisherEnum.NBA: lambda: Runner(lambda vdb, ndb: NBACrawler(PublisherEnum.NBA, vdb, ndb), PublisherEnum.NBA),
+    PublisherEnum.TECHCRUNCH: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.TECHCRUNCH, vdb, ndb), PublisherEnum.TECHCRUNCH),
+    PublisherEnum.VICE: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.VICE, vdb, ndb), PublisherEnum.VICE),
 }
 
 @app.route('/query', methods=['GET'])
@@ -55,7 +55,10 @@ def handle_query():
     return response
     
 def answer_query(chat_history, query, source):
-    runner = runner_dict.get(PublisherEnum(source))
+    import time
+    st = time.time()
+    runner = runner_dict.get(PublisherEnum(source))()
+    print(f"time for setup: {time.time() - st}")
     if runner:
         return runner.get_chat_result(chat_history, query)
     else:

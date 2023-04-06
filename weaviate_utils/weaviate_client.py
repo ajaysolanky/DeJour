@@ -1,4 +1,7 @@
+#TODO: Add uuid to weaviate class
+
 import os
+import uuid
 import json
 import weaviate
 
@@ -12,7 +15,7 @@ class WeaviateClient(object):
 
     def __init__(self, publisher: PublisherEnum) -> None:
         self.publisher = publisher
-        self.class_name = f"ArticleSnippet{self.publisher.value}"
+        self.class_name = f"ArticleSnippet_{self.publisher.value}"
         auth_config = weaviate.auth.AuthApiKey(api_key=self.API_KEY)
         self.client = weaviate.Client(
             url = self.CLUSTER_URL,
@@ -38,6 +41,7 @@ class WeaviateClient(object):
         return {
             "class": self.class_name,
             "description": "Snippet of text spliced from an article",
+            "vectorizer": "text2vec-openai",
             "properties": [
                 {
                     "name": "title",
@@ -69,20 +73,26 @@ class WeaviateClient(object):
 
     def get_property_names(self):
         property_names = []
-        for property in self.get_class_obj():
+        for property in self.get_class_obj()['properties']:
             property_names.append(property['name'])
         return property_names
 
     def upload_data(self, data):
+        ids = []
         with self.client.batch as batch:
             batch.batch_size=100
             # Batch import all Questions
             for i, d in enumerate(data):
-                print(f"importing question: {i+1}")
+                print(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
 
-                properties = {d[name] for name in self.get_property_names()}
-
-                self.client.batch.add_data_object(properties, self.class_name)
+                properties = {name: d[name] for name in self.get_property_names()}
+                id = str(uuid.uuid4())
+                ids.append(id)
+                self.client.batch.add_data_object(
+                    data_object=properties,
+                    class_name=self.class_name,
+                    uuid=id)
+        return ids
 
     def fetch_top_k_matches(self, query_text, k):
         query_dict = {"concepts": [query_text]}
@@ -96,3 +106,8 @@ class WeaviateClient(object):
             )
 
         return result['data']['Get'][self.class_name]
+
+    def delete_class(self):
+        print(f"deleting {self.class_name}...")
+        self.client.schema.delete_class(self.class_name)
+        print(f"deleted {self.class_name}!")

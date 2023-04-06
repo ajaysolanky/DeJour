@@ -38,7 +38,7 @@ class Runner(object):
             )
         self.chain = VectorDBQAWithSourcesChain.from_llm(
             llm=OpenAI(temperature=0),
-            vectorstore=self.vector_db.store
+            vectorstore=self.vector_db.get_vectorstore()
             )
         self.cq = ChatQuery(self.vector_db, self.news_db)
 

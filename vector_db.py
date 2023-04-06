@@ -8,6 +8,7 @@ from langchain.vectorstores import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.docstore.document import Document
 from typing import Dict, List
+from langchain.vectorstores.weaviate import Weaviate
 
 import numpy as np
 
@@ -24,6 +25,10 @@ class VectorDB(ABC):
     @abstractmethod
     def get_k_closest_docs(self, query: str, k: int):
         pass
+    
+    @abstractmethod
+    def get_vectorstore(self):
+        pass
 
 class VectorDBLocal(VectorDB):
     def __init__(self, publisher):
@@ -36,6 +41,9 @@ class VectorDBLocal(VectorDB):
             init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)
         self.load_db()
+
+    def get_vectorstore(self):
+        return self.store
 
     def load_db(self):
         index = faiss.read_index(self.index_file_name)
@@ -84,9 +92,13 @@ class VectorDBWeaviate(VectorDB):
         super().__init__(publisher)
         self.weaviate_client = WeaviateClient(self.publisher)
     
+    def get_vectorstore(self):
+        return Weaviate(self.weaviate_client.client, self.weaviate_client.class_name, self.weaviate_client.TEXT_FIELD_NAME)
+
     def add_texts(self, texts: List[str], metadatas: List[Dict]):
-        data = [md.update({'snippet': txt}) for txt, md in zip(texts, metadatas)]
-        self.weaviate_client.upload_data(data)
+        data = [md | {self.weaviate_client.TEXT_FIELD_NAME: txt}  for txt, md in zip(texts, metadatas)]
+        new_ids = self.weaviate_client.upload_data(data)
+        return new_ids
     
     def get_k_closest_docs(self, query: str, k: int):
         results = self.weaviate_client.fetch_top_k_matches(query, k)
