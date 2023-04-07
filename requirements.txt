@@ -5,7 +5,7 @@ pandas
 faiss-cpu
 openai
 spacy==3.5.0
-nltk
+# nltk
 numpy
 tiktoken
 clean-text

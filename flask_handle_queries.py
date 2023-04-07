@@ -8,19 +8,11 @@ from crawlers.nbacrawler import NBACrawler
 from utilities.memory_cache import ChatHistoryMemoryService
 from utilities.html_reader import HTMLReader
 from publisher_enum import PublisherEnum
+from query_handler import QueryHandler
 
 app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
-
-#TODO: clean this up
-runner_dict = {
-    PublisherEnum.ATLANTA_DUNIA: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.ATLANTA_DUNIA, vdb, ndb), PublisherEnum.ATLANTA_DUNIA),
-    PublisherEnum.GOOGLE_NEWS: lambda: Runner(GNCrawler, PublisherEnum.GOOGLE_NEWS),
-    PublisherEnum.NBA: lambda: Runner(lambda vdb, ndb: NBACrawler(PublisherEnum.NBA, vdb, ndb), PublisherEnum.NBA),
-    PublisherEnum.TECHCRUNCH: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.TECHCRUNCH, vdb, ndb), PublisherEnum.TECHCRUNCH),
-    PublisherEnum.VICE: lambda: Runner(lambda vdb, ndb: SourceCrawler(PublisherEnum.VICE, vdb, ndb), PublisherEnum.VICE),
-}
 
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
@@ -53,14 +45,12 @@ def handle_query():
     updated_chat_history = chat_history_service.get_chat_history(session_id)
     print(updated_chat_history)
     return response
-    
+
 def answer_query(chat_history, query, source):
-    import time
-    st = time.time()
-    runner = runner_dict.get(PublisherEnum(source))()
-    print(f"time for setup: {time.time() - st}")
-    if runner:
-        return runner.get_chat_result(chat_history, query)
+    # runner = runner_dict.get(PublisherEnum(source))()
+    query_handler = QueryHandler(PublisherEnum(source))
+    if query_handler:
+        return query_handler.get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
 

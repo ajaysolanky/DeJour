@@ -91,6 +91,7 @@ class BaseCrawler:
                 "source": r.url,
                 "publish_timestamp": r.publish_timestamp,
                 "fetch_timestamp": r.fetch_timestamp,
+                "top_image_url": r.top_image_url
             }
             metadatas.extend([metadata] * len(splits))
             orig_idces.extend([i] * len(splits))

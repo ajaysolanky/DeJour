@@ -1,5 +1,4 @@
 import pandas as pd
-import pdb
 from .base_crawler import BaseCrawler
 
 class SourceCrawler(BaseCrawler):
