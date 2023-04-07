@@ -12,7 +12,10 @@ logging.getLogger().setLevel(logging.INFO)
 def lambda_handler(event, context):
     # breakpoint()
     logging.info("EVENT: %s ; CONTEXT: %s" % (event, context))
-    body = json.loads(event['body'])
+    body = event["body"]
+    if isinstance(body, str):
+        body = json.loads(body)
+    
     chat_history = body['chat_history']
     query = body['query']
     publisher = body['publisher']

@@ -1,4 +1,3 @@
-from main import Runner
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 from utils import use_ghetto_disk_cache
@@ -36,6 +35,8 @@ def handle_query():
 
     # if use_cache:
     #     function = use_ghetto_disk_cache(function)
+
+    import pdb; pdb.set_trace()
     result = function(chat_history, new_query, source)
     response = jsonify(result)
     response.headers.add('Access-Control-Allow-Origin', '*')

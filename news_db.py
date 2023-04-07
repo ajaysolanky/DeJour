@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 from publisher_enum import PublisherEnum
+from utils import LOCAL_DB_FOLDER
 
 # to read dates from db: https://stackoverflow.com/questions/3305413/how-to-preserve-timezone-when-parsing-date-time-strings-with-strptime
 class NewsDB(object):
@@ -21,8 +22,8 @@ class NewsDB(object):
     TABLE_NAME = 'news_data'
 
     def __init__(self, publisher: PublisherEnum):
-        folder_name = ""
-        self.db_file_name = folder_name + publisher.value + "_" + 'news.db'
+        dir_path = f"{LOCAL_DB_FOLDER}/{publisher.value}/"
+        self.db_file_name = dir_path + 'news.db'
         con = self.get_con()
         cur = con.cursor()
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")

@@ -16,6 +16,7 @@ from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
 
 from weaviate_utils.weaviate_client import WeaviatePythonClient, WeaviateCURL
+from utils import LOCAL_DB_FOLDER
 
 class VectorDB(ABC):
     def __init__(self, publisher) -> None:
@@ -37,10 +38,15 @@ class VectorDBLocal(VectorDB):
     def __init__(self, publisher):
         super().__init__(publisher)
         self.store = None
-        folder_name = ""
-        self.index_file_name = folder_name + self.publisher.value + "_" + 'docs.index'
-        self.store_file_name = folder_name + self.publisher.value + "_" + 'faiss_store.pkl'
-        if not os.path.isfile(self.index_file_name):
+        dir_path = f"{LOCAL_DB_FOLDER}/{self.publisher.value}/"
+        self.index_file_path = dir_path + 'docs.index'
+        self.store_file_path = dir_path + 'faiss_store.pkl'
+        if not os.path.isfile(self.index_file_path):
+            os.makedirs(os.path.dirname(self.index_file_path))
+            with open(self.index_file_path, 'w') as f:
+                f.write('')
+            with open(self.store_file_path, 'w') as f:
+                f.write('')
             init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)
         self.load_db()
@@ -49,8 +55,8 @@ class VectorDBLocal(VectorDB):
         return self.store
 
     def load_db(self):
-        index = faiss.read_index(self.index_file_name)
-        with open(self.store_file_name, "rb") as f:
+        index = faiss.read_index(self.index_file_path)
+        with open(self.store_file_path, "rb") as f:
             store = pickle.load(f)
             store.index = index
         self.store = store
@@ -84,10 +90,10 @@ class VectorDBLocal(VectorDB):
     def save_db(self, store_obj=None):
         if not store_obj:
             store_obj = self.store
-        faiss.write_index(store_obj.index, self.index_file_name)
+        faiss.write_index(store_obj.index, self.index_file_path)
         store_copy = copy.deepcopy(store_obj)
         store_copy.index = None
-        with open(self.store_file_name, 'wb') as f:
+        with open(self.store_file_path, 'wb') as f:
             pickle.dump(store_copy, f)
 
 class VectorDBWeaviate(VectorDB, ABC):

@@ -5,6 +5,8 @@ import pytz
 from datetime import datetime
 from dateutil import parser
 
+LOCAL_DB_FOLDER = 'local_db_files'
+
 class HiddenPrints:
     def __enter__(self):
         self._original_stdout = sys.stdout

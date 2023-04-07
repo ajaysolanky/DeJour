@@ -1,3 +1,0 @@
-{
-    "template": "Content: {page_content}\nPublish Timestamp: {publish_time}\nSource: {source}"
-}

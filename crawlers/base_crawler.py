@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article
@@ -12,6 +13,7 @@ class BaseCrawler:
     CHUNK_OVERLAP_TOKENS = int(CHUNK_SIZE_TOKENS * .2)
     SEPARATOR = '\n'
     MIN_SPLIT_WORDS = 5
+    CRAWLER_SLEEP_SECONDS = 900
 
     def __init__(self, vector_db, news_db):
         self.vector_db = vector_db
@@ -120,3 +122,9 @@ class BaseCrawler:
         new_news_df = self.fetch_news_df_filtered()
         if new_news_df is not None:
             self.add_new_news_to_dbs(new_news_df)
+
+    def run_crawler(self):
+        while True:
+            self.full_update()
+            print(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
+            time.sleep(self.CRAWLER_SLEEP_SECONDS)

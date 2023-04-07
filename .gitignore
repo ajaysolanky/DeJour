@@ -10,3 +10,4 @@ db/
 .DS_Store
 aal_scripts/
 test_dump/
+local_db_files/
