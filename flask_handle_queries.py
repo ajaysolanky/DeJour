@@ -7,18 +7,12 @@ from crawlers.source_crawler import SourceCrawler
 from crawlers.nbacrawler import NBACrawler
 from utilities.memory_cache import ChatHistoryMemoryService
 from utilities.html_reader import HTMLReader
+from publisher_enum import PublisherEnum
+from query_handler import QueryHandler
 
 app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
-
-runner_dict = {
-    "google_news": Runner(GNCrawler, "google_news"),
-    "atlanta_dunia": Runner(lambda vdb, ndb: SourceCrawler("atlanta_dunia", vdb, ndb), "atlanta_dunia"),
-    "techcrunch": Runner(lambda vdb, ndb: SourceCrawler("techcrunch", vdb, ndb), "techcrunch"),
-    "vice": Runner(lambda vdb, ndb: SourceCrawler("vice", vdb, ndb), "vice"),
-    "nba": Runner(lambda vdb, ndb: NBACrawler("nba", vdb, ndb), "nba")
-}
 
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
@@ -39,6 +33,7 @@ def handle_query():
 
     use_cache = request.args.get('use_cache', True)
     function = answer_query
+
     # if use_cache:
     #     function = use_ghetto_disk_cache(function)
     result = function(chat_history, new_query, source)
@@ -50,11 +45,12 @@ def handle_query():
     updated_chat_history = chat_history_service.get_chat_history(session_id)
     print(updated_chat_history)
     return response
-    
+
 def answer_query(chat_history, query, source):
-    runner = runner_dict.get(source)
-    if runner:
-        return runner.get_chat_result(chat_history, query)
+    # runner = runner_dict.get(PublisherEnum(source))()
+    query_handler = QueryHandler(PublisherEnum(source))
+    if query_handler:
+        return query_handler.get_chat_result(chat_history, query)
     else:
         raise Exception("Invalid source")
 

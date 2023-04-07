@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
 from langchain.docstore.document import Document
-
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 
 from utils import get_current_structured_time_string

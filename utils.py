@@ -70,6 +70,7 @@ def use_ghetto_disk_cache(func):
         return result
     return wrapper
 
+
 def get_structured_time_string_from_dt(dt):
     return dt.strftime('%a, %b %d, %Y %I:%M%p')
 

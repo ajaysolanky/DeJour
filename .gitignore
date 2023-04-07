@@ -9,3 +9,4 @@ disk_cache_dir/
 db/
 .DS_Store
 aal_scripts/
+test_dump/

@@ -38,8 +38,8 @@ class BaseCrawler:
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
-                "publish_date": str(getattr(article, "publish_date", None)) if getattr(article, "publish_date", None) else None,
-                "fetch_date": str(pytz.utc.localize(datetime.utcnow()))
+                "publish_timestamp": getattr(article, "publish_date", None).isoformat() if getattr(article, "publish_date", None) else None,
+                "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
             })
     
     def fetch_news_df_filtered(self):
@@ -86,11 +86,12 @@ class BaseCrawler:
             splits = text_splitter.split_text(r.text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
-            pt_input = r.publish_date if r.publish_date else r.fetch_date
-            pt_str = unstructured_time_string_to_structured(pt_input) if pt_input else None
             metadata = {
+                "title": r.title,
                 "source": r.url,
-                "publish_time": pt_str,
+                "publish_timestamp": r.publish_timestamp,
+                "fetch_timestamp": r.fetch_timestamp,
+                "top_image_url": r.top_image_url
             }
             metadatas.extend([metadata] * len(splits))
             orig_idces.extend([i] * len(splits))
@@ -107,6 +108,7 @@ class BaseCrawler:
         
         # so it doesn't edit the input df
         copy_df = new_news_df.copy()
+        #TODO: prolly don't wanna store embedding ids in the news db
         copy_df['embedding_ids'] = pd.Series(idc_id_map_stred)
 
         #TODO: use commits so we can do this first and then unwind if vector db update fails
