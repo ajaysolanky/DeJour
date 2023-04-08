@@ -1,6 +1,3 @@
-import os
-# os.environ["PYTHONBREAKPOINT"] = "ipdb.set_trace"
-
 import json
 import logging
 
@@ -10,7 +7,6 @@ from publisher_enum import PublisherEnum
 logging.getLogger().setLevel(logging.INFO)
 
 def lambda_handler(event, context):
-    # breakpoint()
     logging.info("EVENT: %s ; CONTEXT: %s" % (event, context))
     body = event["body"]
     if isinstance(body, str):

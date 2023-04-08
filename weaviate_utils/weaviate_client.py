@@ -88,7 +88,7 @@ class WeaviatePythonClient(WeaviateService):
             url = self.CLUSTER_URL,
             auth_client_secret=auth_config,
             additional_headers={
-                "X-OpenAI-Api-Key": os.getenv('OAI_TK', 'not the token')
+                "X-OpenAI-Api-Key": os.getenv('OPENAI_API_KEY', 'not the token')
             }
         )
 
@@ -151,7 +151,7 @@ class WeaviateCURL(WeaviateService):
     def get_headers(self):
         return {
             "Content-Type": "application/json",
-            "X-OpenAI-Api-Key": os.getenv('OAI_TK', 'not the token'),
+            "X-OpenAI-Api-Key": os.getenv('OPENAI_API_KEY', 'not the token'),
             "Authorization": f"Bearer {self.API_KEY}"
         }
 
