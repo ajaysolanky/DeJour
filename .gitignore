@@ -11,3 +11,4 @@ db/
 aal_scripts/
 test_dump/
 local_db_files/
+.env

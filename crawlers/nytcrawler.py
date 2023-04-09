@@ -146,7 +146,7 @@ class NYTCrawler:
         news_df = pd.DataFrame(mapped_articles)
 
         print("Getting matched articles")
-        matched_artcles = self.news_db.get_matched_articles(news_df.url)
+        matched_artcles = self.news_db.get_matched_articles(news_df.url.tolist())
 
         new_news_df = news_df[news_df['url'].isin(matched_artcles) == False]
 

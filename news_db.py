@@ -1,13 +1,18 @@
+import hashlib
+import os
 import sqlite3
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from abc import ABC, abstractmethod
+import firebase_admin
+from firebase_admin import credentials, firestore, app_check
 
 from publisher_enum import PublisherEnum
 from utils import LOCAL_DB_FOLDER
 
 # to read dates from db: https://stackoverflow.com/questions/3305413/how-to-preserve-timezone-when-parsing-date-time-strings-with-strptime
-class NewsDB(object):
+class NewsDB(ABC):
     COLUMNS = [
         'title',
         'url',
@@ -21,17 +26,59 @@ class NewsDB(object):
     ]
     TABLE_NAME = 'news_data'
 
-    def __init__(self, publisher: PublisherEnum):
-        dir_path = f"{LOCAL_DB_FOLDER}/{publisher.value}/"
-        self.db_file_name = dir_path + 'news.db'
-        con = self.get_con()
-        cur = con.cursor()
-        cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")
-        con.commit()
+    def __init__(self, publisher) -> None:
+        self.publisher = publisher
+
+    @abstractmethod
+    def add_news_df(self, news_df):
+        pass
+
+    @abstractmethod
+    def get_news_data(self, urls, fields):
+        pass
+
+    def get_news_id(self, url):
+        """
+        args:
+            url (str): the url of the news article
+        
+        Returns:
+            str: id string for the news object
+        """
+        return hashlib.md5(url.encode('utf-8')).hexdigest()
+
+    @abstractmethod
+    def get_matched_articles(self, urls):
+        """
+        args:
+            urls (list[str]): list of urls
+
+        Returns:
+            Set: Set of urls that already exist in the DB
+        """
+        pass
+    
+    @abstractmethod
+    def create_table(self):
+        pass
+
+    @abstractmethod
+    def drop_table(self):
+        pass
+
+class NewsDBLocal(NewsDB):
+    "Sqlite3 implementation"
+    def __init__(self, publisher: PublisherEnum) -> None:
+        super().__init__(publisher)
+        dir_path = f"{LOCAL_DB_FOLDER}/{self.publisher.value}/news_db/"
+        self.db_file_path = dir_path + 'news.db'
+        if not os.path.isfile(self.db_file_path):
+            os.makedirs(dir_path)
+        self.create_table()
 
     def get_con(self):
-        return sqlite3.connect(self.db_file_name)
-
+        return sqlite3.connect(self.db_file_path)
+    
     def add_news_df(self, news_df):
         con = self.get_con()
         cur = con.cursor()
@@ -47,20 +94,19 @@ class NewsDB(object):
         cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(existing_table_columns))})", data)
         con.commit()
 
+    def create_table(self):
+        con = self.get_con()
+        cur = con.cursor()
+        cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")
+        con.commit()
+
     def get_news_data(self, urls, fields):
         cur = self.get_con().cursor()
         res = cur.execute(f"SELECT {','.join(fields)} FROM {self.TABLE_NAME} WHERE url IN ({', '.join(['?']*len(urls))})", urls)
         data = res.fetchall()
         return pd.DataFrame(data, columns=fields)
-
+    
     def get_matched_articles(self, urls):
-        """
-        <input>
-        urls: list of urls
-
-        <return>
-        set of the queried urls that already exist in the news db
-        """
         matched = self.get_news_data(urls, fields=['url'])
         exist_set = set(matched.url.unique())
         return exist_set
@@ -70,3 +116,74 @@ class NewsDB(object):
         cur = con.cursor()
         cur.execute(f"DROP TABLE IF EXISTS {self.TABLE_NAME}")
         con.commit()
+
+#TODO: Firestore database might not be the most scalable way of doing this, could be worth looking into other options
+class NewsDBFirestoreDatabase(NewsDB):
+    def __init__(self, publisher) -> None:
+        super().__init__(publisher)
+        if not firebase_admin._apps:
+            cred = credentials.Certificate("./dejour_firebase_credentials.json")
+            firebase_admin.initialize_app(cred)  # connecting to firebase
+
+        self.db = firestore.client()
+
+    def add_news_df(self, news_df):
+        records = news_df.to_dict('records')
+
+        collection_ref = self.db.collection(self.TABLE_NAME)
+        for record in records:
+            id = self.get_news_id(record['url'])
+            doc_ref = collection_ref.document(id)  # Create a new document for each record
+            doc_ref.set(record)
+
+        print(f"Uploaded {len(records)} records to the '{self.TABLE_NAME}' collection in Firestore.")
+
+    def get_news_data(self, urls, fields):
+        documents = []
+        for url in urls:
+            # Fetch the document by 'url'
+            doc_ref = self.db.collection(self.TABLE_NAME).document(url)
+            doc = doc_ref.get()
+
+            if doc.exists:
+                doc_data = doc.to_dict()
+                # Retrieve only the specified fields
+                filtered_data = {field: doc_data.get(field) for field in fields}
+                documents.append(filtered_data)
+            else:
+                print(f"No document found with url: {url}")
+                documents.append(None)
+
+        return documents
+
+    def check_existing_urls(self, urls):
+        # Query documents with the specified URLs
+        collection_ref = self.db.collection(self.TABLE_NAME)
+        query = collection_ref.where('url', 'in', urls)
+        query_results = query.stream()
+
+        # Collect the 'url' values of the existing documents
+        existing_urls = set(doc.to_dict()['url'] for doc in query_results)
+
+        return existing_urls
+
+    def get_matched_articles(self, urls):
+        CHUNK_SIZE = 10
+        def query_existing_urls(chunk):
+            collection_ref = self.db.collection(self.TABLE_NAME)
+            query = collection_ref.where('url', 'in', chunk)
+            query_results = query.stream()
+            return [doc.to_dict()['url'] for doc in query_results]
+
+        existing_urls = []
+        for i in range(0, len(urls), CHUNK_SIZE):
+            chunk = urls[i:i + CHUNK_SIZE]
+            existing_urls.extend(query_existing_urls(chunk))
+
+        return set(existing_urls)
+    
+    def create_table(self):
+        pass
+
+    def drop_table(self):
+        pass
