@@ -16,6 +16,8 @@ CORS(app)
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
 def handle_query():
+    import time
+    st = time.time()
     new_query = request.args['query']
     session_id = request.args['session_id']
     source = request.args['source']
@@ -36,7 +38,6 @@ def handle_query():
     # if use_cache:
     #     function = use_ghetto_disk_cache(function)
 
-    import pdb; pdb.set_trace()
     result = function(chat_history, new_query, source)
     response = jsonify(result)
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -45,6 +46,7 @@ def handle_query():
     chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
     updated_chat_history = chat_history_service.get_chat_history(session_id)
     print(updated_chat_history)
+    print(f"TIME: {time.time() - st}")
     return response
 
 def answer_query(chat_history, query, source):

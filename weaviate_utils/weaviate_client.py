@@ -1,5 +1,4 @@
-#TODO: Use url as uuid -- will need to concatenate url with str indices
-
+import hashlib
 import os
 import uuid
 import weaviate
@@ -18,6 +17,11 @@ class WeaviateService(ABC):
     def __init__(self, publisher: PublisherEnum) -> None:
         self.publisher = publisher
         self.class_name = f"ArticleSnippet_{self.publisher.value}"
+
+    def get_id(self, url, idx):
+        # return get_valid_uuid(uuid.uuid4())
+        # return f"{url}::INDEX::{idx}"
+        return hashlib.md5(f"{url}::INDEX::{idx}".encode('utf-8')).hexdigest()
 
     @abstractmethod
     def try_create_weaviate_class(self):
@@ -110,7 +114,8 @@ class WeaviatePythonClient(WeaviateService):
             for i, d in enumerate(data):
                 print(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
                 properties = {name: d[name] for name in self.get_property_names()}
-                id = get_valid_uuid(uuid.uuid4())
+                # id = get_valid_uuid(uuid.uuid4())
+                id = self.get_id(d['source'], d['idx'])
                 ids.append(id)
                 self.client.batch.add_data_object(
                     data_object=properties,
@@ -161,7 +166,8 @@ class WeaviateCURL(WeaviateService):
         for i, d in enumerate(data):
             print(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
             properties = {name: d[name] for name in self.get_property_names()}
-            id = get_valid_uuid(uuid.uuid4())
+            # id = get_valid_uuid(uuid.uuid4())
+            id = self.get_id(d['source'], d['idx'])
             ids.append(id)
             batch_data.append({
                 "class":  self.class_name,

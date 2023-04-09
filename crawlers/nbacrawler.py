@@ -1,5 +1,7 @@
 
+from datetime import datetime
 import pandas as pd
+import pytz
 import requests
 import json
 from bs4 import BeautifulSoup as bs
@@ -94,7 +96,8 @@ class NBACrawler(BaseCrawler):
                 "preview": None,
                 "top_image_url": top_image_url,
                 "authors": authors,
-                "publish_date": publish_date
+                "publish_timestamp": publish_date,
+                "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
             })
         else:
             print(f"article not found in articles dict: {url}")

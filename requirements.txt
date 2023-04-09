@@ -1,3 +1,4 @@
+#TODO: divide into separate req files for query handler and crawler
 unidecode
 langchain==0.0.123
 gnews
@@ -15,7 +16,8 @@ flask_cors
 selenium
 webdriver_manager
 newspaper3k==0.2.8
-weaviate-client
+weaviate-client==3.15.4
+firebase-admin
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0.tar.gz
 #en_core_web_sm
 #unidecode

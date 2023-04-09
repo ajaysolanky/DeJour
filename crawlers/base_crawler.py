@@ -47,7 +47,7 @@ class BaseCrawler:
     def fetch_news_df_filtered(self):
         news_df = self.fetch_news_df()
 
-        matched_artcles = self.news_db.get_matched_articles(news_df.url)
+        matched_artcles = self.news_db.get_matched_articles(news_df.url.tolist())
 
         new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]
 
@@ -55,7 +55,6 @@ class BaseCrawler:
 
         if new_news_df.shape[0] == 0:
             return None
-
 
         fetched_data = new_news_df.url.apply(self.augment_data)
         new_news_df = new_news_df.join(fetched_data)
@@ -88,14 +87,15 @@ class BaseCrawler:
             splits = text_splitter.split_text(r.text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
-            metadata = {
-                "title": r.title,
-                "source": r.url,
-                "publish_timestamp": r.publish_timestamp,
-                "fetch_timestamp": r.fetch_timestamp,
-                "top_image_url": r.top_image_url
-            }
-            metadatas.extend([metadata] * len(splits))
+            for split_idx in range(len(splits)):
+                metadatas.append({
+                    "title": r.title,
+                    "source": r.url,
+                    "publish_timestamp": r.publish_timestamp,
+                    "fetch_timestamp": r.fetch_timestamp,
+                    "top_image_url": r.top_image_url,
+                    "idx": split_idx
+                })
             orig_idces.extend([i] * len(splits))
         
         print("adding texts to VectorDB")

@@ -38,7 +38,7 @@ class VectorDBLocal(VectorDB):
     def __init__(self, publisher):
         super().__init__(publisher)
         self.store = None
-        dir_path = f"{LOCAL_DB_FOLDER}/{self.publisher.value}/"
+        dir_path = f"{LOCAL_DB_FOLDER}/{self.publisher.value}/vector_db/"
         self.index_file_path = dir_path + 'docs.index'
         self.store_file_path = dir_path + 'faiss_store.pkl'
         if not os.path.isfile(self.index_file_path):
