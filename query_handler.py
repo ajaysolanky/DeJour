@@ -1,7 +1,7 @@
 import json
 import logging
 from query import ChatQuery
-from vector_db import VectorDBWeaviateCURL
+from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 
 from publisher_enum import PublisherEnum
 
@@ -23,6 +23,7 @@ def lambda_handler(event, context):
 class QueryHandler(object):
     def __init__(self, publisher: PublisherEnum):
         self.vector_db = VectorDBWeaviateCURL(publisher)
+        # self.vector_db = VectorDBLocal(publisher)
         self.cq = ChatQuery(self.vector_db)
 
     def get_chat_result(self, chat_history, query):

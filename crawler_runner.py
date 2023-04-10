@@ -9,6 +9,7 @@ from crawlers.sources.techcrunch_source import TechCrunchSource
 from crawlers.sources.vice_source import ViceSource
 from crawlers.sources.sfstandard_source import SFStandardSource
 from crawlers.sources.nba_source import NBASource
+from crawlers.sources.bbc_india_source import BBCIndiaSource
 from crawlers.nbacrawler import NBACrawler
 from publisher_enum import PublisherEnum
 
@@ -33,6 +34,7 @@ def lambda_handler(event, context):
 def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_db: bool):
     crawler_dict = {
         PublisherEnum.ATLANTA_DUNIA : get_source_crawler(ADSource),
+        PublisherEnum.BBC_INDIA : get_source_crawler(BBCIndiaSource),
         PublisherEnum.GOOGLE_NEWS : GNCrawler,
         PublisherEnum.NBA : lambda vdb, ndb: NBACrawler(NBASource, vdb, ndb),
         PublisherEnum.SF_STANDARD : get_source_crawler(SFStandardSource),
@@ -72,4 +74,5 @@ if __name__ == '__main__':
     if not publisher_str:
         raise Exception('must specify a publisher')
 
-    build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db).run_crawler()
+    crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
+    crawler.run_crawler()

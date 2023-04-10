@@ -24,10 +24,13 @@ class NewsDB(ABC):
         'authors',
         'publish_date'
     ]
-    TABLE_NAME = 'news_data'
+    TABLE_NAME_PREFIX = 'news_data'
 
     def __init__(self, publisher) -> None:
         self.publisher = publisher
+
+    def get_table_name(self):
+        return f"{self.TABLE_NAME_PREFIX}_{self.publisher.value}"
 
     @abstractmethod
     def add_news_df(self, news_df):
@@ -79,10 +82,13 @@ class NewsDBLocal(NewsDB):
     def get_con(self):
         return sqlite3.connect(self.db_file_path)
     
+    def get_table_name(self):
+        return self.TABLE_NAME_PREFIX
+    
     def add_news_df(self, news_df):
         con = self.get_con()
         cur = con.cursor()
-        table_info = cur.execute(f"PRAGMA table_info({self.TABLE_NAME});").fetchall()
+        table_info = cur.execute(f"PRAGMA table_info({self.get_table_name()});").fetchall()
         existing_table_columns = [c[1] for c in table_info]
 
         copy_df = news_df.copy()
@@ -91,18 +97,18 @@ class NewsDBLocal(NewsDB):
                 copy_df[tc] = None
             copy_df[tc] = copy_df[tc].astype(str)
         data = list(copy_df[existing_table_columns].itertuples(index=False, name=None))
-        cur.executemany(f"INSERT INTO {self.TABLE_NAME} VALUES({', '.join(['?'] * len(existing_table_columns))})", data)
+        cur.executemany(f"INSERT INTO {self.get_table_name()} VALUES({', '.join(['?'] * len(existing_table_columns))})", data)
         con.commit()
 
     def create_table(self):
         con = self.get_con()
         cur = con.cursor()
-        cur.execute(f"CREATE TABLE IF NOT EXISTS {self.TABLE_NAME}({', '.join(self.COLUMNS)})")
+        cur.execute(f"CREATE TABLE IF NOT EXISTS {self.get_table_name()}({', '.join(self.COLUMNS)})")
         con.commit()
 
     def get_news_data(self, urls, fields):
         cur = self.get_con().cursor()
-        res = cur.execute(f"SELECT {','.join(fields)} FROM {self.TABLE_NAME} WHERE url IN ({', '.join(['?']*len(urls))})", urls)
+        res = cur.execute(f"SELECT {','.join(fields)} FROM {self.get_table_name()} WHERE url IN ({', '.join(['?']*len(urls))})", urls)
         data = res.fetchall()
         return pd.DataFrame(data, columns=fields)
     
@@ -114,7 +120,7 @@ class NewsDBLocal(NewsDB):
     def drop_table(self):
         con = self.get_con()
         cur = con.cursor()
-        cur.execute(f"DROP TABLE IF EXISTS {self.TABLE_NAME}")
+        cur.execute(f"DROP TABLE IF EXISTS {self.get_table_name()}")
         con.commit()
 
 #TODO: Firestore database might not be the most scalable way of doing this, could be worth looking into other options
@@ -130,19 +136,19 @@ class NewsDBFirestoreDatabase(NewsDB):
     def add_news_df(self, news_df):
         records = news_df.to_dict('records')
 
-        collection_ref = self.db.collection(self.TABLE_NAME)
+        collection_ref = self.db.collection(self.get_table_name())
         for record in records:
             id = self.get_news_id(record['url'])
             doc_ref = collection_ref.document(id)  # Create a new document for each record
             doc_ref.set(record)
 
-        print(f"Uploaded {len(records)} records to the '{self.TABLE_NAME}' collection in Firestore.")
+        print(f"Uploaded {len(records)} records to the '{self.get_table_name()}' collection in Firestore.")
 
     def get_news_data(self, urls, fields):
         documents = []
         for url in urls:
             # Fetch the document by 'url'
-            doc_ref = self.db.collection(self.TABLE_NAME).document(url)
+            doc_ref = self.db.collection(self.get_table_name()).document(url)
             doc = doc_ref.get()
 
             if doc.exists:
@@ -158,7 +164,7 @@ class NewsDBFirestoreDatabase(NewsDB):
 
     def check_existing_urls(self, urls):
         # Query documents with the specified URLs
-        collection_ref = self.db.collection(self.TABLE_NAME)
+        collection_ref = self.db.collection(self.get_table_name())
         query = collection_ref.where('url', 'in', urls)
         query_results = query.stream()
 
@@ -170,7 +176,7 @@ class NewsDBFirestoreDatabase(NewsDB):
     def get_matched_articles(self, urls):
         CHUNK_SIZE = 10
         def query_existing_urls(chunk):
-            collection_ref = self.db.collection(self.TABLE_NAME)
+            collection_ref = self.db.collection(self.get_table_name())
             query = collection_ref.where('url', 'in', chunk)
             query_results = query.stream()
             return [doc.to_dict()['url'] for doc in query_results]

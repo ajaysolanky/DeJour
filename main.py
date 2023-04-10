@@ -7,3 +7,4 @@
 # TODO: are there race conditions with the vector store?
 # TODO: exponentially decay old answers
 # TODO: experiment with chunk overlap
+# TODO: put a cap on how much text from a single article can be uploaded to Weaviate

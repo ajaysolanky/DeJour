@@ -44,6 +44,11 @@ class WeaviateService(ABC):
             "class": self.class_name,
             "description": "Snippet of text spliced from an article",
             "vectorizer": "text2vec-openai",
+            "moduleConfig": {
+                "text2vec-openai": {
+                    "vectorizeClassName": True
+                }
+            },
             "properties": [
                 {
                     "name": "title",
