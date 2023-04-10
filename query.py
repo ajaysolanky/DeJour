@@ -48,9 +48,12 @@ class ChatQuery(Query):
         query: <str>
         returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
         """
+        chat_history_mapped = []
+        for chat in chat_history:
+            chat_history_mapped.append((chat['question'], chat['answer']))
         chain_resp = self.chain({
             "question": query,
-            "chat_history": chat_history
+            "chat_history": chat_history_mapped
         })
         answer_and_src_idces = chain_resp['answer']
         source_docs = chain_resp['source_documents']

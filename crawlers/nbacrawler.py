@@ -68,7 +68,6 @@ class NBACrawler(BaseCrawler):
         lightweight_articles = []
         for article in articles_list:
             if article is None:
-                pdb.set_trace()
                 print("article is none. this is unexpected")
             lightweight_articles.append({
                 "url": article["url"],
