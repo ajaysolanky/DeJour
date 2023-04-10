@@ -26,6 +26,9 @@ def lambda_handler(event, context):
     publisher_str = body['publisher']
     crawler = build_crawler(publisher_str, use_local_vector_db=False, use_local_news_db=False)
     crawler.full_update()
+    return {
+        "status": "ok"
+    }
 
 def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_db: bool):
     crawler_dict = {

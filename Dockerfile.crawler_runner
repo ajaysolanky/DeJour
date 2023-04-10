@@ -14,13 +14,26 @@
 
 FROM public.ecr.aws/lambda/python:3.9
 
+# Install necessary dependencies
+RUN yum -y install wget unzip xorg-x11-server-Xvfb \
+    && yum -y install libXcomposite libXcursor libXdamage libXext libXi libXtst libXrandr libXss libXinerama libX11-xcb libxcb libxcb-xfixes libxcb-xkb libxkbcommon libxkbcommon-x11 libxcb-dri3 libxcb-render libxcb-shape libxcb-shm libxcb-sync libxcb-xfixes libxshmfence libdrm libgbm libwayland-server \
+    && yum -y install cups-libs \
+    && yum -y install libXScrnSaver \
+    && yum -y install alsa-lib \
+    && yum -y install pango cairo cairo-gobject \
+    && yum -y install atk \
+    && yum -y install atkmm \
+    && yum -y install gdk-pixbuf2 \
+    && yum -y install gtk3 \
+    && yum -y install libxslt \
+    && yum -y install libnotify \
+    && yum -y install nss \
+    && yum -y install GConf2
+
 # Install the function's dependencies using file requirements.txt
 # from your project folder.
-
 COPY requirements.txt  .
 RUN  pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
-COPY first_time_setup.sh .
-RUN ./first_time_setup.sh
 
 # Copy function code
 COPY . ${LAMBDA_TASK_ROOT}

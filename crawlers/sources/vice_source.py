@@ -4,7 +4,7 @@ from .base_source import BaseSource
 
 class ViceSource(BaseSource):
     BASE_URL = 'https://www.vice.com/'
-    USE_SELENIUM = True
+    USE_PYPPETEER = True
 
     def set_categories(self):
         category_urls = [

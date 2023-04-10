@@ -3,7 +3,7 @@ from newspaper.source import Category
 from .base_source import BaseSource
 
 class NBASource(BaseSource):
-    USE_SELENIUM = True
+    USE_PYPPETEER = True
     BASE_URL = 'https://www.nba.com/'
 
     def set_categories(self):

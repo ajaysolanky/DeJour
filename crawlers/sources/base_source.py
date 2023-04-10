@@ -1,14 +1,12 @@
-import time
+import asyncio
+from pyppeteer import launch
 from newspaper.source import Source
-from newspaper.configuration import Configuration
 from newspaper.utils import extend_config
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from newspaper.configuration import Configuration
 
 class BaseSource(Source):
     BASE_URL = ''
-    USE_SELENIUM = False
+    USE_PYPPETEER = False
 
     @classmethod
     def get_build(cls, url='', dry=False, config=None, **kwargs) -> Source:
@@ -26,30 +24,43 @@ class BaseSource(Source):
         return s
 
     def download_categories(self):
-        if self.USE_SELENIUM:
-            return self.download_categories_selenium()
+        if self.USE_PYPPETEER:
+            self.download_categories_pyppeteer()
         else:
             return super().download_categories()
 
-    #TODO: bring back multithreading
-    def download_categories_selenium(self):
-        # requests = network.multithread_request(category_urls, self.config)
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        options.add_argument("enable-automation")
-        options.add_argument("--disable-infobars")
-        options.add_argument("--disable-dev-shm-usage")
-        driver = webdriver.Chrome(ChromeDriverManager().install(),options=options)
-        for index, category in enumerate(self.categories):
-            self.categories[index].html = self.get_html_selenium(category.url, driver)
-            # req = requests[index]
-        self.categories = [c for c in self.categories if c.html]
+    def download_categories_pyppeteer(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.download_categories_async())
 
-    @staticmethod
-    def get_html_selenium(url, driver, sleep_time=5):
-        driver.get(url)
-        time.sleep(sleep_time)
-        html = driver.page_source
+    async def download_categories_async(self):
+        browser = await launch(
+            headless=True,
+            dumpio=True,
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+                '--window-size=1920x1080',
+                '--disable-software-rasterizer',
+                '--disable-features=VizDisplayCompositor',
+                '--disable-gl-drawing-for-tests',
+                '--disable-extensions',
+                '--disable-infobars',
+            ],
+        )
+        for index, category in enumerate(self.categories):
+            print(f"CATEGORYYY {category}")
+            self.categories[index].html = await self.get_html_pyppeteer(category.url, browser)
+        self.categories = [c for c in self.categories if c.html]
+        await browser.close()
+
+    async def get_html_pyppeteer(self, url, browser, sleep_time=5):
+        page = await browser.newPage()
+        await page.goto(url)
+        await asyncio.sleep(sleep_time)
+        html = await page.content()
+        await page.close()
         return html
