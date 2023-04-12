@@ -15,11 +15,11 @@ class GNCrawler(BaseCrawler):
             'WORLD',
             'NATION',
             'BUSINESS',
-            'TECHNOLOGY',
+            # 'TECHNOLOGY',
             'ENTERTAINMENT',
             'SPORTS',
             'SCIENCE',
-            'HEALTH'
+            # 'HEALTH'
             ]
         topics_news = []
         for topic in topics:
