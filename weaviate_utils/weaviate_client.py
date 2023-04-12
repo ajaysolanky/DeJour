@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import os
 import uuid
@@ -117,7 +118,7 @@ class WeaviatePythonClient(WeaviateService):
             batch.batch_size=self.BATCH_SIZE
             # Batch import all Questions
             for i, d in enumerate(data):
-                print(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
+                logging.info(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
                 properties = {name: d[name] for name in self.get_property_names()}
                 # id = get_valid_uuid(uuid.uuid4())
                 id = self.get_id(d['source'], d['idx'])
@@ -142,9 +143,9 @@ class WeaviatePythonClient(WeaviateService):
         return result['data']['Get'][self.class_name]
 
     def delete_class(self):
-        print(f"deleting {self.class_name}...")
+        logging.info(f"deleting {self.class_name}...")
         self.client.schema.delete_class(self.class_name)
-        print(f"deleted {self.class_name}!")
+        logging.info(f"deleted {self.class_name}!")
 
 #TODO: check status code and do error handling
 # This class exists so as to avoid setup latency incurred by python client
@@ -169,7 +170,7 @@ class WeaviateCURL(WeaviateService):
         ids = []
         batch_data = []
         for i, d in enumerate(data):
-            print(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
+            logging.info(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
             properties = {name: d[name] for name in self.get_property_names()}
             # id = get_valid_uuid(uuid.uuid4())
             id = self.get_id(d['source'], d['idx'])
@@ -188,7 +189,7 @@ class WeaviateCURL(WeaviateService):
 
     #TODO: this isn't working
     def upload_batch(self, batch_data):
-        print(f"uploading batch of size {len(batch_data)}")
+        logging.info(f"uploading batch of size {len(batch_data)}")
         r = requests.post(
             self.CLUSTER_URL+'/v1/batch/objects',
             headers=self.get_headers(),

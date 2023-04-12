@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 from utils import use_ghetto_disk_cache
@@ -45,8 +46,8 @@ def handle_query():
     # Update the chat history
     chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
     updated_chat_history = chat_history_service.get_chat_history(session_id)
-    print(updated_chat_history)
-    print(f"TIME: {time.time() - st}")
+    logging.info(updated_chat_history)
+    logging.info(f"TIME: {time.time() - st}")
     return response
 
 def answer_query(chat_history, query, source):
@@ -59,5 +60,5 @@ def answer_query(chat_history, query, source):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
-    print("Starting server...")
+    logging.info("Starting server...")
     # html_reader = HTMLReader()

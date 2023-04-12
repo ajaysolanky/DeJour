@@ -1,3 +1,4 @@
+import logging
 import os, sys
 import tiktoken
 import json
@@ -16,14 +17,15 @@ class HiddenPrints:
         sys.stdout.close()
         sys.stdout = self._original_stdout
 
-class TokenCountCalculator:
+class TokenCountCalculator(object):
     ENCODING_TYPE = "gpt2"  # encoding for text-davinci-003
-    
+
     def __init__(self):
         self.encoding = tiktoken.get_encoding(self.ENCODING_TYPE)
-    
+
     def get_num_tokens(self, text):
-        return len(self.encoding.encode(text))
+        num_tokens = len(self.encoding.encode(text))
+        return num_tokens
 
 class GhettoDiskCache:
     def __init__(self):
@@ -82,3 +84,11 @@ def get_current_structured_time_string():
 
 def unstructured_time_string_to_structured(unstructured_time_string):
     return get_structured_time_string_from_dt(parser.parse(unstructured_time_string))
+
+def get_isoformat_and_add_tz_if_not_there(dt):
+    if dt is not None:
+        if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+            eastern = pytz.timezone('America/New_York')
+            dt = eastern.localize(dt)
+
+        return dt.isoformat()

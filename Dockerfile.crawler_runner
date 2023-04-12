@@ -12,6 +12,8 @@
 
 # docker push 037556591838.dkr.ecr.us-east-1.amazonaws.com/dejour-crawler-runner:latest
 
+# don't forget to bump up the AWS lambda runtime and memory constraints -- 5gb mem should do the trick
+
 FROM public.ecr.aws/lambda/python:3.9
 
 # Install necessary dependencies

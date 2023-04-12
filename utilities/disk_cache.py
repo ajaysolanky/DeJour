@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 
 class ChatHistoryService:
@@ -18,10 +19,10 @@ class ChatHistoryService:
     def add_object_if_needed(self, session_id, chat_history):
         existing = self.get_chat_history(session_id)
         if existing is None:
-            print("here!")
+            logging.info("here!")
             self.add_object(session_id, chat_history)
         else:
-            print("here 2!")
+            logging.info("here 2!")
             self.update_object(session_id, chat_history)
 
     def update_object(self, session_id, chat_history):
@@ -49,5 +50,5 @@ VALUES(?, ?);'''
         cursor.execute("SELECT * FROM chat_history")
         rows = cursor.fetchall()
         for row in rows:
-            print(row)
+            logging.info(row)
 

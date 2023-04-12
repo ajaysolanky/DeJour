@@ -22,11 +22,10 @@ logging.getLogger().setLevel(logging.INFO)
 def lambda_handler(event, context):
     logging.info("EVENT: %s ; CONTEXT: %s" % (event, context))
     body = event["body"]
-    if isinstance(body, str):
-        body = json.loads(body)
     publisher_str = body['publisher']
     crawler = build_crawler(publisher_str, use_local_vector_db=False, use_local_news_db=False)
-    crawler.full_update()
+    crawler.fetch_and_upload_news()
+    logging.info("FINISHED fetch_and_upload_news")
     return {
         "status": "ok"
     }

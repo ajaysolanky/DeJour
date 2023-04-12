@@ -1,3 +1,4 @@
+import logging
 from gnews import GNews
 import pandas as pd
 
@@ -27,6 +28,6 @@ class GNCrawler(BaseCrawler):
 
         all_news = top_news + topics_news
 
-        print(f"fetched {len(all_news)} articles")
+        logging.info(f"fetched {len(all_news)} articles")
 
         return pd.DataFrame(all_news)

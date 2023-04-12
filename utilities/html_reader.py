@@ -1,6 +1,5 @@
-
+import logging
 from langchain import OpenAI, VectorDBQA
-
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import CharacterTextSplitter
@@ -19,4 +18,4 @@ class HTMLReader:
         qa_chain = VectorDBQA.from_chain_type(llm=llm, chain_type='stuff', vectorstore=docsearch)
 
         answer = qa_chain.run('What are the two guidelines?')      
-        print(answer) 
+        logging.info(answer) 

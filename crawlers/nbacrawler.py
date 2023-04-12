@@ -1,4 +1,4 @@
-
+import logging
 from datetime import datetime
 import pandas as pd
 import pytz
@@ -54,7 +54,7 @@ class NBACrawler(BaseCrawler):
         articles = source_build.articles
         for article in articles:
             if article.url is None or article.url == "":
-                print("skipping article with no url")
+                logging.info("skipping article with no url")
                 continue
             if "/video" in article.url:
                 continue
@@ -62,14 +62,14 @@ class NBACrawler(BaseCrawler):
                 article_dict = self.download_article(article.url)
                 self.articles[article.url] = article_dict
             except:
-                print(f"error downloading article: {article.url}")
+                logging.info(f"error downloading article: {article.url}")
                 continue
         articles_list = list(self.articles.values())
         lightweight_articles = []
         for article in articles_list:
             if article is None:
                 pdb.set_trace()
-                print("article is none. this is unexpected")
+                logging.info("article is none. this is unexpected")
             lightweight_articles.append({
                 "url": article["url"],
                 "title": article["title"]
@@ -100,5 +100,5 @@ class NBACrawler(BaseCrawler):
                 "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
             })
         else:
-            print(f"article not found in articles dict: {url}")
+            logging.info(f"article not found in articles dict: {url}")
                 

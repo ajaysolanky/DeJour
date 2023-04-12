@@ -1,4 +1,5 @@
 import time
+import logging
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article
@@ -6,7 +7,7 @@ from datetime import datetime
 import pytz
 
 from text_splitter import HardTokenSpacyTextSplitter
-from utils import HiddenPrints, TokenCountCalculator, unstructured_time_string_to_structured
+from utils import HiddenPrints, TokenCountCalculator, unstructured_time_string_to_structured, get_isoformat_and_add_tz_if_not_there
 
 class BaseCrawler:
     CHUNK_SIZE_TOKENS = 300
@@ -14,6 +15,7 @@ class BaseCrawler:
     SEPARATOR = '\n'
     MIN_SPLIT_WORDS = 5
     CRAWLER_SLEEP_SECONDS = 900
+    UPLOAD_BATCH_SIZE = 10
 
     def __init__(self, vector_db, news_db):
         self.vector_db = vector_db
@@ -26,7 +28,6 @@ class BaseCrawler:
     
     def augment_data(self, url):
             print (f"fetching article @ url: {url}")
-            # article = self.get_article_obj_from_url(url)
             article = Article(url=url)
             try:
                 article.download()
@@ -40,34 +41,47 @@ class BaseCrawler:
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
-                "publish_timestamp": getattr(article, "publish_date", None).isoformat() if getattr(article, "publish_date", None) else None,
+                "publish_timestamp": get_isoformat_and_add_tz_if_not_there(getattr(article, "publish_date", None)),
                 "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
             })
-    
-    def fetch_news_df_filtered(self):
+
+    def fetch_and_upload_news(self):
+        logging.info("fetching news df")
         news_df = self.fetch_news_df()
 
+        logging.info("getting matched articles")
         matched_artcles = self.news_db.get_matched_articles(news_df.url.tolist())
 
+        logging.info("filtering news df")
         new_news_df = news_df[news_df['url'].isin(matched_artcles | self.failed_dl_cache) == False]
 
-        print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
+        logging.info(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
 
         if new_news_df.shape[0] == 0:
             return None
 
-        fetched_data = new_news_df.url.apply(self.augment_data)
-        new_news_df = new_news_df.join(fetched_data)
+        # Process the augment calls and upload the news in the same batch
+        num_batches = (new_news_df.shape[0] + self.UPLOAD_BATCH_SIZE - 1) // self.UPLOAD_BATCH_SIZE
+        for i in range(num_batches):
+            start = i * self.UPLOAD_BATCH_SIZE
+            end = min((i + 1) * self.UPLOAD_BATCH_SIZE, new_news_df.shape[0])
+            batch_df = new_news_df.iloc[start:end]
+            
+            fetched_batch_data = batch_df.url.apply(self.augment_data)
+            batch_df = batch_df.join(fetched_batch_data)
 
-        self.failed_dl_cache |= set(new_news_df[new_news_df['text'].isna()].url)
-        new_news_df = new_news_df[new_news_df['text'].isna() == False]
-        print(f"These urls failed to download: {self.failed_dl_cache}. Finally {new_news_df.shape[0]} articles will be processed.")
-        printable_titles = '\n'.join(new_news_df.title)
-        print(f"new article titles:\n{printable_titles}")
+            self.failed_dl_cache |= set(batch_df[batch_df['text'].isna()].url)
+            batch_df = batch_df[batch_df['text'].isna() == False]
+
+            printable_titles = '\n'.join(batch_df.title)
+            logging.info(f"Batch {i + 1} of {num_batches} article titles:\n{printable_titles}")
+
+            self.add_news_to_dbs(batch_df)
+            logging.info(f"Batch {i + 1} of {num_batches} uploaded successfully")
 
         return new_news_df
 
-    def add_new_news_to_dbs(self, new_news_df):
+    def add_news_to_dbs(self, new_news_df):
         """
         Takes a new news df and returns
         
@@ -98,9 +112,9 @@ class BaseCrawler:
                 })
             orig_idces.extend([i] * len(splits))
         
-        print("adding texts to VectorDB")
+        logging.info("adding texts to VectorDB")
         new_ids = self.vector_db.add_texts(docs, metadatas)
-        print("finished adding texts to VectorDB")
+        logging.info("finished adding texts to VectorDB")
 
         idc_id_map = defaultdict(list)
         for new_id, orig_idx in zip(new_ids, orig_idces):
@@ -114,17 +128,12 @@ class BaseCrawler:
         copy_df['embedding_ids'] = pd.Series(idc_id_map_stred)
 
         #TODO: use commits so we can do this first and then unwind if vector db update fails
-        print("adding news to news db")
+        logging.info("adding news to news db")
         self.news_db.add_news_df(copy_df)
-        print("finished adding news to news db")
-
-    def full_update(self):
-        new_news_df = self.fetch_news_df_filtered()
-        if new_news_df is not None:
-            self.add_new_news_to_dbs(new_news_df)
+        logging.info("finished adding news to news db")
 
     def run_crawler(self):
         while True:
-            self.full_update()
-            print(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
+            self.fetch_and_upload_news()
+            logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.CRAWLER_SLEEP_SECONDS)

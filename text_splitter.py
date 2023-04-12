@@ -38,7 +38,7 @@ class HardTokenSpacyTextSplitter(SpacyTextSplitter):
                         num_splits += 1
                     final_splits.extend(sub_chunks)
                 except Exception as e:
-                    print(f"ERROR IN SPLITTING: {e}. FROM text: {split[:500]}. On split idx: {i}")
+                    logging.info(f"ERROR IN SPLITTING: {e}. FROM text: {split[:500]}. On split idx: {i}")
                     continue
         return self._merge_splits(final_splits, self._separator)
     

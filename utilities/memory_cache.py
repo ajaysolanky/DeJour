@@ -1,3 +1,5 @@
+import logging
+
 class ChatHistoryMemoryService:
     def __init__(self):
         self.question_answer_pairs = {}
@@ -13,4 +15,4 @@ class ChatHistoryMemoryService:
         return self.question_answer_pairs.get(session_id, [])
     
     def print_contents(self):
-        print(self.question_answer_pairs)
+        logging.info(self.question_answer_pairs)

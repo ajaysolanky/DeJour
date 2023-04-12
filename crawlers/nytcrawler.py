@@ -1,3 +1,4 @@
+import logging
 import requests
 # from ghost import Ghost
 import newspaper
@@ -58,15 +59,15 @@ class NYTCrawler:
             response = requests.get(base_url, params=params)
             json_response = response.json()
             if 'status' not in json_response:
-                print("No status in response.")
+                logging.info("No status in response.")
                 return results
             status = json_response['status']                
             if status != 'OK':
-                print(f"Invalid status. Status is {status} ")
+                logging.info(f"Invalid status. Status is {status} ")
                 return results
             articles = json_response['response']['docs']
             results.extend(articles)
-            print(f"processed page: {i}")
+            logging.info(f"processed page: {i}")
             hits_count = json_response['response']['meta']['hits']
             if hits_count < 10:
                 return results
@@ -78,7 +79,7 @@ class NYTCrawler:
     #     data_auth_options = soup.select_one('.full-page')['data-auth-options']
     #     json_data_auth_options = json.loads(data_auth_options)
     #     token = json_data_auth_options['authToken']
-    #     print(token)
+    #     logging.info(token)
     #     payload = {
     #         "userid": "aalhad.patankar@gmail.com",
     #         "password": "37dtu437",
@@ -100,7 +101,7 @@ class NYTCrawler:
     def fetch_new_news_df(self, date):
         articles = self.get_article_results(date) 
 
-        print(len(articles))
+        logging.info(len(articles))
         # return
         def convert_to_format(nyt_result):
             try:
@@ -111,13 +112,13 @@ class NYTCrawler:
                 published_date = dateutil.parser.isoparse(published_date_iso)
                 published_date_string = published_date.strftime("%B %d, %Y at %I:%M %p")
             except Exception as e: 
-                print(f"Error in article format converting to format. Error: {e}")
+                logging.info(f"Error in article format converting to format. Error: {e}")
 
-            print(f"Attempting to download full article from url: {url}")
+            logging.info(f"Attempting to download full article from url: {url}")
             try:
                 # Filter out interactive articles
                 if "com/interactive" in url:
-                    print(f"Encountered interactive article {url}. Using abstract")
+                    logging.info(f"Encountered interactive article {url}. Using abstract")
                     text = backup_text
                 else:
                     text_nodes = self.get_article_from_url(url)
@@ -127,7 +128,7 @@ class NYTCrawler:
                     if len(text) < 100:
                         text = backup_text
             except Exception as e:
-                print(f"Failed to extract full article, falling back to abstract. Error: {e}")
+                logging.info(f"Failed to extract full article, falling back to abstract. Error: {e}")
                 text = backup_text
             date_published_string = "This article was published on: " + published_date_string
             text_with_context = date_published_string + text
@@ -139,22 +140,22 @@ class NYTCrawler:
             }
         
         mapped_articles = list(map(convert_to_format, articles))
-        # print(mapped_articles)
+        # logging.info(mapped_articles)
     
         # filter out already processed articles
-        print(f"Found mapped articles. Count: {len(mapped_articles)}")
+        logging.info(f"Found mapped articles. Count: {len(mapped_articles)}")
         news_df = pd.DataFrame(mapped_articles)
 
-        print("Getting matched articles")
+        logging.info("Getting matched articles")
         matched_artcles = self.news_db.get_matched_articles(news_df.url.tolist())
 
         new_news_df = news_df[news_df['url'].isin(matched_artcles) == False]
 
-        print(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
+        logging.info(f"{len(matched_artcles)} articles already exist in the db. {new_news_df.shape[0]} articles remain.")
 
         return new_news_df
         # self.add_new_news_to_dbs(news_df)
-        # print(_first_article_url)
+        # logging.info(_first_article_url)
         # obj = self.get_article_obj_from_url(_first_article_url)
         # self.add_new_news_to_dbs([obj])
         # self.create_session()
@@ -163,7 +164,7 @@ class NYTCrawler:
         if new_news_df.shape[0] == 0:
             return
         
-        print("Adding new news to dbs")
+        logging.info("Adding new news to dbs")
         text_splitter = HardTokenSpacyTextSplitter(
             self.get_num_tokens,
             chunk_size=self.CHUNK_SIZE_TOKENS,
@@ -192,7 +193,7 @@ class NYTCrawler:
 
         for i, r in new_news_df.iterrows():
             if len(r.text) > 1000000:
-                print(f"Skipping article with text length {len(r.text)}. url: {r.url}")
+                logging.info(f"Skipping article with text length {len(r.text)}. url: {r.url}")
                 continue
             splits = text_splitter.split_text(r.text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
@@ -200,9 +201,9 @@ class NYTCrawler:
             metadatas.extend([{"source": r.url}] * len(splits))
             orig_idces.extend([i] * len(splits))
         
-        print("adding texts to VectorDB")
+        logging.info("adding texts to VectorDB")
         new_ids = self.vector_db.add_texts(docs, metadatas)
-        print("finished adding texts to VectorDB")
+        logging.info("finished adding texts to VectorDB")
 
         idc_id_map = defaultdict(list)
         for new_id, orig_idx in zip(new_ids, orig_idces):
@@ -214,9 +215,9 @@ class NYTCrawler:
         copy_df = new_news_df.copy()
         copy_df['embedding_ids'] = pd.Series(idc_id_map_stred)
 
-        print("adding news to news db")
+        logging.info("adding news to news db")
         self.news_db.add_news_df(copy_df)
-        print("finished adding news to news db")
+        logging.info("finished adding news to news db")
         
     def create_session(self):
         session = requests.session()
@@ -231,19 +232,19 @@ class NYTCrawler:
             "token": token,
             "is_continue": False
         }
-        # print(token)
+        # logging.info(token)
         # auth_token = soup.select('full-page')[0].get_text()
-        # print(auth_token)
-        # print(soup[len(soup) - 1])
+        # logging.info(auth_token)
+        # logging.info(soup[len(soup) - 1])
 
         # for a in soup:
-        #     print(a)
-        #     print('BREAKBREAKBREAK')
+        #     logging.info(a)
+        #     logging.info('BREAKBREAKBREAK')
         scraper = cfscrape.create_scraper(sess=session)
-        print(scraper.post("https://myaccount.nytimes.com/auth/login/?URI=https://www.nytimes.com/2023/03/07/us/politics/nord-stream-pipeline-sabotage-ukraine.html", data=payload).content)
+        logging.info(scraper.post("https://myaccount.nytimes.com/auth/login/?URI=https://www.nytimes.com/2023/03/07/us/politics/nord-stream-pipeline-sabotage-ukraine.html", data=payload).content)
 
         # response = session.post('https://www.nytimes.com/interactive/2023/03/05/nyregion/election-asians-voting-republicans-nyc.html', data=payload)
-        # print(response)
+        # logging.info(response)
     
     def get_article_from_url(self, url):
         article = newspaper.Article(url=url, language='en')
@@ -264,7 +265,7 @@ class NYTCrawler:
         all_nodes = article.get_all_nodes()
         return all_nodes
         
-        # print(article["title"] \
+        # logging.info(article["title"] \
         #     + "\n\t\t" + article["published_date"] \
         #     + "\n\n"\
         #     + "\n" + article["text"]\
@@ -282,7 +283,7 @@ class NYTCrawler:
 
         # page_source = driver.page_source
         # text = fulltext(page_source)
-        # print(text)
+        # logging.info(text)
         # with open('sample_article.txt', 'w') as file:
         #     file.write(page_source)
 

@@ -1,3 +1,4 @@
+import logging
 import asyncio
 from pyppeteer import launch
 from newspaper.source import Source
@@ -52,7 +53,6 @@ class BaseSource(Source):
             ],
         )
         for index, category in enumerate(self.categories):
-            print(f"CATEGORYYY {category}")
             self.categories[index].html = await self.get_html_pyppeteer(category.url, browser)
         self.categories = [c for c in self.categories if c.html]
         await browser.close()

@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import os
 import sqlite3
@@ -142,7 +143,7 @@ class NewsDBFirestoreDatabase(NewsDB):
             doc_ref = collection_ref.document(id)  # Create a new document for each record
             doc_ref.set(record)
 
-        print(f"Uploaded {len(records)} records to the '{self.get_table_name()}' collection in Firestore.")
+        logging.info(f"Uploaded {len(records)} records to the '{self.get_table_name()}' collection in Firestore.")
 
     def get_news_data(self, urls, fields):
         documents = []
@@ -157,7 +158,7 @@ class NewsDBFirestoreDatabase(NewsDB):
                 filtered_data = {field: doc_data.get(field) for field in fields}
                 documents.append(filtered_data)
             else:
-                print(f"No document found with url: {url}")
+                logging.info(f"No document found with url: {url}")
                 documents.append(None)
 
         return documents
