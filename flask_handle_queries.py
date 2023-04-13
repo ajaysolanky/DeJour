@@ -23,6 +23,7 @@ def handle_query():
     session_id = request.args['session_id']
     # source = request.args['source']
     url = request.args['url']
+    inline = request.args.get('inline') == 'true'
 
     if not new_query:
         raise Exception("Query is empty")
@@ -39,13 +40,7 @@ def handle_query():
     
         # Call your api with the chat history and the new query 
 
-        use_cache = request.args.get('use_cache', True)
-        function = answer_query
-
-        # if use_cache:
-        #     function = use_ghetto_disk_cache(function)
-
-        result = function(chat_history, new_query, source)
+        result = answer_query(chat_history, new_query, source, inline)
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', '*')
 
@@ -85,9 +80,9 @@ def get_publisher_for_url(url):
     else:
         raise Exception("Invalid url")
     
-def answer_query(chat_history, query, source):
+def answer_query(chat_history, query, source, inline):
     # runner = runner_dict.get(PublisherEnum(source))()
-    query_handler = QueryHandler(source)
+    query_handler = QueryHandler(source, inline)
     if query_handler:
         return query_handler.get_chat_result(chat_history, query)
     else:
