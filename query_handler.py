@@ -17,7 +17,7 @@ def lambda_handler(event, context):
     query = body['query']
     # publisher = body['publisher']
     url = body['url']
-    inline = body.get('inline') == 'true'
+    inline = body.get('inline')
     try:
         publisher = get_publisher_for_url(url)
         qh = QueryHandler(publisher, inline)

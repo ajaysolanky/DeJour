@@ -23,7 +23,7 @@ def handle_query():
     session_id = request.args['session_id']
     # source = request.args['source']
     url = request.args['url']
-    inline = request.args.get('inline') == 'true'
+    inline = request.args.get('inline') == 'True'
 
     if not new_query:
         raise Exception("Query is empty")
