@@ -15,10 +15,42 @@ def lambda_handler(event, context):
     
     chat_history = body['chat_history']
     query = body['query']
-    publisher = body['publisher']
-    qh = QueryHandler(PublisherEnum(publisher))
-    chat_result = qh.get_chat_result(chat_history, query)
-    return chat_result
+    # publisher = body['publisher']
+    url = body['url']
+    try:
+        publisher = get_publisher_for_url(url)
+        qh = QueryHandler(publisher)
+        chat_result = qh.get_chat_result(chat_history, query)
+        return chat_result
+    except Exception as e:
+        print(f"Get publisher failed with error: {e}")
+        print(f"Invalid url: {url}")
+        return format_error_response_as_answer("DeJour is not supported on this website")
+    
+def format_error_response_as_answer(error):
+    return {
+        "answer": error,
+        "sources": []
+    }
+
+def get_publisher_for_url(url):
+    if "atlantadunia" in url:
+        return PublisherEnum.ATLANTA_DUNIA
+    elif "bbc" in url:
+        return PublisherEnum.BBC_INDIA
+    elif "google" in url:
+        return PublisherEnum.GOOGLE_NEWS
+    elif "nba" in url:
+        return PublisherEnum.NBA
+    elif "sfstandard" in url:
+        return PublisherEnum.SF_STANDARD
+    elif "techcrunch" in url:
+        return PublisherEnum.TECHCRUNCH
+    elif "vice" in url:
+        return PublisherEnum.VICE
+    else:
+        raise Exception("Invalid url")
+
 
 class QueryHandler(object):
     def __init__(self, publisher: PublisherEnum):
