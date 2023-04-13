@@ -23,6 +23,7 @@ def handle_query():
     session_id = request.args['session_id']
     # source = request.args['source']
     url = request.args['url']
+    inline = request.args.get('inline') == 'True'
 
     if not new_query:
         raise Exception("Query is empty")
@@ -32,33 +33,26 @@ def handle_query():
         raise Exception("Url is empty")
     
     try:
-        print(f"Received query for url: {url}")
+        logging.info(f"Received query for url: {url}")
         source = get_publisher_for_url(url)
-        print(f"Url mapped to source: {source}")
+        logging.info(f"Url mapped to source: {source}")
         chat_history = chat_history_service.get_chat_history(session_id)
     
         # Call your api with the chat history and the new query 
 
-        use_cache = request.args.get('use_cache', True)
-        function = answer_query
-
-        # if use_cache:
-        #     function = use_ghetto_disk_cache(function)
-
-        result = function(chat_history, new_query, source)
+        result = answer_query(chat_history, new_query, source, inline)
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', '*')
 
         # Update the chat history
         chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
         updated_chat_history = chat_history_service.get_chat_history(session_id)
-        print(updated_chat_history)
-        print(f"TIME: {time.time() - st}")
+        logging.info(updated_chat_history)
+        logging.info(f"TIME: {time.time() - st}")
         return response
     except:
-        print(f"Invalid url: {url}")
+        logging.info(f"Invalid url: {url}")
         return format_error_response_as_answer("DeJour is not supported on this website")
-    
 
 def format_error_response_as_answer(error):
     response = jsonify({
@@ -86,9 +80,9 @@ def get_publisher_for_url(url):
     else:
         raise Exception("Invalid url")
     
-def answer_query(chat_history, query, source):
+def answer_query(chat_history, query, source, inline):
     # runner = runner_dict.get(PublisherEnum(source))()
-    query_handler = QueryHandler(source)
+    query_handler = QueryHandler(source, inline)
     if query_handler:
         return query_handler.get_chat_result(chat_history, query)
     else:
