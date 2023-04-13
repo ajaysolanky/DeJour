@@ -13,7 +13,7 @@ class DejourStuffDocumentsChain(StuffDocumentsChain):
         for i, doc in enumerate(docs):
             base_info = {"article_snippet": doc.page_content}
             base_info.update(doc.metadata)
-            base_info['source'] = f"[{i}]"
+            base_info['source'] = f"[{i+1}]"
             document_info = {
                 k: base_info.get(k,'UNKNOWN') for k in self.document_prompt.input_variables
             }

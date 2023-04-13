@@ -18,14 +18,21 @@ class WeaviateService(ABC):
     def __init__(self, publisher: PublisherEnum) -> None:
         self.publisher = publisher
         self.class_name = f"ArticleSnippet_{self.publisher.value}"
+        if not self.class_exists():
+            self.create_weaviate_class()
 
     def get_id(self, url, idx):
         # return get_valid_uuid(uuid.uuid4())
         # return f"{url}::INDEX::{idx}"
         return hashlib.md5(f"{url}::INDEX::{idx}".encode('utf-8')).hexdigest()
 
+    def class_exists(self):
+        r = requests.get("https://dejour-cluster-11g1ktu8.weaviate.network/v1/schema", headers={"Authorization": f"Bearer {self.API_KEY}"})
+        class_names = [el['class'] for el in r.json()['classes']]
+        return self.class_name in class_names
+
     @abstractmethod
-    def try_create_weaviate_class(self):
+    def create_weaviate_class(self):
         pass
 
     @abstractmethod
@@ -102,15 +109,16 @@ class WeaviatePythonClient(WeaviateService):
             }
         )
 
-    def try_create_weaviate_class(self):
-        try:
-            self.client.schema.create_class(self.get_class_obj())
-        except Exception as e:
-            # hopefully they don't change this message
-            if e.message and 'already used as a name for an Object class' in e.message:
-                pass
-            else:
-                raise e
+    def create_weaviate_class(self):
+        self.client.schema.create_class(self.get_class_obj())
+        # try:
+        #     self.client.schema.create_class(self.get_class_obj())
+        # except Exception as e:
+        #     # hopefully they don't change this message
+        #     if e.message and 'already used as a name for an Object class' in e.message:
+        #         pass
+        #     else:
+        #         raise e
     
     def upload_data(self, data):
         ids = []
@@ -150,7 +158,7 @@ class WeaviatePythonClient(WeaviateService):
 #TODO: check status code and do error handling
 # This class exists so as to avoid setup latency incurred by python client
 class WeaviateCURL(WeaviateService):
-    def try_create_weaviate_class(self):
+    def create_weaviate_class(self):
         data = self.get_class_obj()
         r = requests.post(
             self.CLUSTER_URL+'/v1/schema',

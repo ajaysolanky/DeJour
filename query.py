@@ -6,6 +6,7 @@ from langchain.chains.chat_vector_db.prompts import PromptTemplate
 
 from prompts.all_prompts import ANSWER_QUESTION_PROMPT, CONDENSE_QUESTION_PROMPT, DOCUMENT_PROMPT
 from chains.dejour_stuff_documents_chain import DejourStuffDocumentsChain
+from utils import split_text_into_sentences, extract_body_citations_punctuation_from_sentence
 
 class Query:
     SOURCE_FIELD_DB_MAP = {
@@ -60,7 +61,7 @@ class ChatQuery(Query):
         except: #ValueError
             src_idx = None
         if src_idx:
-            answer = answer_and_src_idces[:src_idx]
+            answer = answer_and_src_idces[:src_idx].strip()
             src_str = answer_and_src_idces[src_idx + len(src_identifier):]
             def extract_idx(idx_str):
                 #TODO: move this somewhere central and consolidate w/ the code in dejour_stuff_documents_chain.py
@@ -73,16 +74,42 @@ class ChatQuery(Query):
                         pass
                 return None
 
-            source_idces = [extract_idx(s.strip()) for s in src_str.split(',')]
-            source_idces = list(filter(lambda x: x is not None, source_idces))
+            source_idces_one_indexed = [extract_idx(s.strip()) for s in src_str.split(',')]
+            source_idces_one_indexed = list(filter(lambda x: x is not None, source_idces_one_indexed))
         else:
             answer = answer_and_src_idces
-            source_idces = []
-        source_idx_dict = dict(enumerate(source_docs))
-        source_docs = [source_idx_dict.get(idx) for idx in source_idces]
-        source_docs = list(filter(lambda x: x is not None, source_docs))
-        source_docs = {d.metadata.get('source'):d for d in source_docs}.values() #de-dupe by source
+            source_idces_one_indexed = []
+
+        # this incredibly convoluted line of code takes in a list of source docs, and outputs a map from src:unique id, where the unique id is one-indexed index of where the source first appears in the list
+        doc_to_id_map = {src:idx + 1 for idx, (_, src) in enumerate(sorted(list({v:k for k, v in {d.metadata.get('source'): len(source_docs) - i for i, d in enumerate(source_docs[::-1])}.items()}.items())))}
+        id_to_doc_map = {v: k for k, v in doc_to_id_map.items()}
+
+        source_idx_to_id = {}
+        for src_idx_plus_one in source_idces_one_indexed:
+            src = source_docs[src_idx_plus_one - 1]
+            source_idx_to_id.update({src_idx_plus_one: doc_to_id_map[src.metadata.get('source')]})
+
+        for k, v in source_idx_to_id.items():
+            answer = answer.replace(f"[{k}]", f"[{v}]")
+
+        source_to_doc_map = {d.metadata.get('source'): d for d in source_docs}
+        unique_source_docs = [source_to_doc_map[src] for src in [v for _,v in sorted(id_to_doc_map.items())]]
+
+        sentences = split_text_into_sentences(answer)
+        bcp = [extract_body_citations_punctuation_from_sentence(sentence) for sentence in sentences]
+
+        constructed_answer = ''
+        for i in range(len(bcp) - 1):
+            cur_body, cur_citations, cur_punctuation = bcp[i]
+            nex_body, nex_citations, nex_punctuation = bcp[i+1]
+            constructed_answer += cur_body
+            if cur_citations != nex_citations:
+                constructed_answer += "".join([f"[{n}]" for n in cur_citations])
+            constructed_answer += cur_punctuation + " "
+        b, c, p = bcp[-1]
+        constructed_answer += b + "".join([f"[{n}]" for n in c]) + p
+
         return {
-            "answer": answer,
-            "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in source_docs]
+            "answer": constructed_answer,
+            "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in unique_source_docs]
         }

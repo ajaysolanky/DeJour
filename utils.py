@@ -1,3 +1,4 @@
+import re
 import logging
 import os, sys
 import tiktoken
@@ -92,3 +93,35 @@ def get_isoformat_and_add_tz_if_not_there(dt):
             dt = eastern.localize(dt)
 
         return dt.isoformat()
+    
+def split_text_into_sentences(text):
+        # Define the regular expression pattern for splitting sentences
+        pattern = r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<![A-Z]\.)(?<=\.|\?)\s'
+
+        # Split the input text using the pattern
+        sentences = re.split(pattern, text)
+        
+        return sentences
+
+def extract_body_citations_punctuation_from_sentence(text):
+    # Define the regular expression pattern for extracting citations
+    pattern = r'(\[\d+\])'
+
+    # Find all citations in the input text
+    citation_matches = re.findall(pattern, text)
+
+    # Convert the citations to integers
+    citations = [int(re.search(r'\d+', c).group()) for c in citation_matches]
+    citations = sorted(set(citations))
+
+    # Remove the citations from the text
+    body = re.sub(pattern, '', text).strip()
+
+    # Extract the punctuation at the end of the body
+    punctuation = body[-1] if body[-1] in '.!?' else ''
+    
+    # Remove the punctuation from the body
+    if punctuation:
+        body = body[:-1].strip()
+
+    return body, citations, punctuation
