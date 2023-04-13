@@ -21,38 +21,74 @@ def handle_query():
     st = time.time()
     new_query = request.args['query']
     session_id = request.args['session_id']
-    source = request.args['source']
+    # source = request.args['source']
+    url = request.args['url']
 
     if not new_query:
         raise Exception("Query is empty")
     if not session_id:
         raise Exception("Session id is empty")
-    if not source:
-        raise Exception("Source is empty")
-    chat_history = chat_history_service.get_chat_history(session_id)
+    if not url:
+        raise Exception("Url is empty")
     
-    # Call your api with the chat history and the new query 
+    try:
+        print(f"Received query for url: {url}")
+        source = get_publisher_for_url(url)
+        print(f"Url mapped to source: {source}")
+        chat_history = chat_history_service.get_chat_history(session_id)
+    
+        # Call your api with the chat history and the new query 
 
-    use_cache = request.args.get('use_cache', True)
-    function = answer_query
+        use_cache = request.args.get('use_cache', True)
+        function = answer_query
 
-    # if use_cache:
-    #     function = use_ghetto_disk_cache(function)
+        # if use_cache:
+        #     function = use_ghetto_disk_cache(function)
 
-    result = function(chat_history, new_query, source)
-    response = jsonify(result)
+        result = function(chat_history, new_query, source)
+        response = jsonify(result)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+
+        # Update the chat history
+        chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
+        updated_chat_history = chat_history_service.get_chat_history(session_id)
+        print(updated_chat_history)
+        print(f"TIME: {time.time() - st}")
+        return response
+    except:
+        print(f"Invalid url: {url}")
+        return format_error_response_as_answer("DeJour is not supported on this website")
+    
+
+def format_error_response_as_answer(error):
+    response = jsonify({
+        "answer": error,
+        "sources": []
+    })
     response.headers.add('Access-Control-Allow-Origin', '*')
-
-    # Update the chat history
-    chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
-    updated_chat_history = chat_history_service.get_chat_history(session_id)
-    logging.info(updated_chat_history)
-    logging.info(f"TIME: {time.time() - st}")
     return response
 
+def get_publisher_for_url(url):
+    if "atlantadunia" in url:
+        return PublisherEnum.ATLANTA_DUNIA
+    elif "bbc" in url:
+        return PublisherEnum.BBC_INDIA
+    elif "google" in url:
+        return PublisherEnum.GOOGLE_NEWS
+    elif "nba" in url:
+        return PublisherEnum.NBA
+    elif "sfstandard" in url:
+        return PublisherEnum.SF_STANDARD
+    elif "techcrunch" in url:
+        return PublisherEnum.TECHCRUNCH
+    elif "vice" in url:
+        return PublisherEnum.VICE
+    else:
+        raise Exception("Invalid url")
+    
 def answer_query(chat_history, query, source):
     # runner = runner_dict.get(PublisherEnum(source))()
-    query_handler = QueryHandler(PublisherEnum(source))
+    query_handler = QueryHandler(source)
     if query_handler:
         return query_handler.get_chat_result(chat_history, query)
     else:

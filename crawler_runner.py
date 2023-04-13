@@ -12,6 +12,7 @@ from crawlers.sources.nba_source import NBASource
 from crawlers.sources.bbc_india_source import BBCIndiaSource
 from crawlers.nbacrawler import NBACrawler
 from publisher_enum import PublisherEnum
+from weaviate_utils.weaviate_client import WeaviatePythonClient
 
 from news_db import NewsDBLocal, NewsDBFirestoreDatabase
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
@@ -42,10 +43,11 @@ def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_
     }
 
     publisher_enum = PublisherEnum(publisher_str)
-
     if use_local_vector_db:
         vector_db_class = VectorDBLocal
     else:
+        weaviate_client = WeaviatePythonClient(publisher_enum)
+        weaviate_client.try_create_weaviate_class()
         vector_db_class = VectorDBWeaviatePythonClient
 
     vector_db = vector_db_class(publisher_enum)
