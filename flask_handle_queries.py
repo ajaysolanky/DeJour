@@ -32,9 +32,9 @@ def handle_query():
         raise Exception("Url is empty")
     
     try:
-        print(f"Received query for url: {url}")
+        logging.info(f"Received query for url: {url}")
         source = get_publisher_for_url(url)
-        print(f"Url mapped to source: {source}")
+        logging.info(f"Url mapped to source: {source}")
         chat_history = chat_history_service.get_chat_history(session_id)
     
         # Call your api with the chat history and the new query 
@@ -52,13 +52,12 @@ def handle_query():
         # Update the chat history
         chat_history_service.add_object_if_needed(session_id, new_query, result["answer"])
         updated_chat_history = chat_history_service.get_chat_history(session_id)
-        print(updated_chat_history)
-        print(f"TIME: {time.time() - st}")
+        logging.info(updated_chat_history)
+        logging.info(f"TIME: {time.time() - st}")
         return response
     except:
-        print(f"Invalid url: {url}")
+        logging.info(f"Invalid url: {url}")
         return format_error_response_as_answer("DeJour is not supported on this website")
-    
 
 def format_error_response_as_answer(error):
     response = jsonify({
