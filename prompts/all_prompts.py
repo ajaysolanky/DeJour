@@ -1,123 +1,139 @@
 ANSWER_QUESTION_PROMPT = \
-"""Below is a list of snippets of content extracted from various news articles, as well as a question. Create a final answer with reference ("SOURCES").
-If you don't know the answer, just say that you don't know. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
+"""Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
+If you don't know the answer, just say "I'm not sure" verbatim. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
 Be concise, be clear, and use bullets where possible.
 The current date and time are {today_date}
 
-QUESTION: Which state/country's law governs the interpretation of the contract?
+QUESTION: What's happened with the Dalai Lama?
 =========
-Content: This Agreement is governed by English law and the parties submit to the exclusive jurisdiction of the English courts in  relation to any dispute (contractual or non-contractual) concerning this Agreement save that either party may apply to any court for an  injunction or other relief to protect its Intellectual Property Rights.
-Source: 28-pl
-Content: No Waiver. Failure or delay in exercising any right or remedy under this Agreement shall not constitute a waiver of such (or any other)  right or remedy.
+Article Snippet: The footage triggered a backlash online with social media users condemning his behavior as inappropriate and disturbing.
+SNAP, the national advocacy group for victims of clergy abuse, said they were "horrified" by the Dalai Lama's actions.
+"Our primary concern is with the innocent boy who was the subject of this disgusting request by a revered spiritual figure," the group said in a statement.
 
-11.7 Severability. The invalidity, illegality or unenforceability of any term (or part of a term) of this Agreement shall not affect the continuation  in force of the remainder of the term (if any) and this Agreement.
+Sticking out one's tongue was often used as a greeting according to ancient Tibetan culture, but is not commonly seen anymore.
 
-11.8 No Agency. Except as expressly stated otherwise, nothing in this Agreement shall create an agency, partnership or joint venture of any  kind between the parties.
+"His Holiness often teases people he meets in an innocent and playful way, even in public and before cameras," the statement from the Dalai Lama read.
 
-11.9 No Third-Party Beneficiaries.
-Publish Timestamp: Monday May 03, 2021 04:37pm
-Source: 30-pl
-Content: (b) if Google believes, in good faith, that the Distributor has violated or caused Google to violate any Anti-Bribery Laws (as  defined in Clause 8.5) or that such a violation is reasonably likely to occur,
-Publish Timestamp: Wednesday May 05, 2021 02:19am
-Source: 4-pl
+Article Title: Dalai Lama apologizes after video shows him kissing boy - WJW FOX 8 News Cleveland
+Publish Timestamp: Tue, Apr 11, 2023 10:39AM
+Source: [1]
+
+Article Snippet: CHINA INTERFERENCE IN SUCCESSION OF NEXT DALAI LAMA SLAMMED BY SEN. RISCH
+The Dalai Lama currently lives in India and is considered by China to be a criminal separatist after he fled Tibet following a failed uprising against China in 1959.
+
+Video of Monday's incident has already racked up millions of views across social media.
+Article Title: Supporters defend Dalai Lama’s odd interaction with young boy, point to Tibet’s history of 'tongue greetings' - Fox News
+Publish Timestamp: UNKNOWN
+Source: [2]
+
+Article Snippet: DHARAMSALA, India (AP) -- Tibetan spiritual leader the Dalai Lama apologized Monday after a video showing him kissing a child on the lips triggered criticism.
+
+A statement posted on his official website said the 87-year-old leader regretted the incident and wished to "apologize to the boy and his family, as well as his many friends across the world, for the hurt his words may have caused.
+"
+The incident occurred at a public gathering in February at the Tsuglagkhang temple in Dharamsala, where the exiled leader lives.
+He was taking questions from the audience when the boy asked if he could hug him.
+
+The Dalai Lama invited the boy up toward the platform he was seated on.
+In the video, he gestured to his cheek, after which the child kissed him before giving him a hug.
+
+The Dalai Lama then asked the boy to kiss him on the lips and stuck out his tongue.
+"And suck my tongue," the Dalai Lama can be heard saying as the boy sticks out his own tongue and leans in, prompting laughter from the audience.
+Article Title: Dalai Lama apologizes after video shows him kissing boy - WJW FOX 8 News Cleveland
+Publish Timestamp: Tue, Apr 11, 2023 10:39AM
+Source: [3]
+
+Article Snippet: DHARAMSHALA, India -
+The Dalai Lama apologized Monday after a video circulated on social media showing the Tibetan spiritual leader asking a young boy to "suck my tongue" at a public event in India.
+
+In the video, the boy is seen hugging the 87-year-old Dalai Lama, who then points to his lips, lifts the boy's chin and leans in for a kiss.
+
+His Holiness then laughs, and the two bow their heads together before the Dalai Lama asks the boy to "suck my tongue," and sticks out his own tongue at the boy before leaning in again.
+
+The Office of His Holiness The Dalai Lama issued a statement apologizing for the incident on its website.
+
+"A video clip has been circulating that shows a recent meeting when a young boy asked His Holiness the Dalai Lama if he could give him a hug.
+His Holiness wishes to apologize to the boy and his family, as well as his many friends across the world, for the hurt his words may have caused," the statement reads.
+"His Holiness often teases people he meets in an innocent and playful way, even in public and before cameras.
+He regrets the incident.
+"
+The boy was visiting the Dalai Lama, the leader of Tibetan Buddhism, as part of an event with M3M Foundation, an India-based nonprofit philanthropic organization.
+Article Title: Dalai Lama apologizes for asking boy to ‘suck my tongue’ in viral video - cleveland.com
+Publish Timestamp: Tue, Apr 11, 2023 03:50PM
+Source: [4]
 =========
-FINAL ANSWER: This Agreement is governed by English law.
-SOURCES: 28-pl
+FINAL ANSWER: The Dalai Lama apologized after a video circulated on social media showing him asking a young boy to "suck my tongue" at a public event in India. The Office of His Holiness The Dalai Lama issued a statement apologizing for the incident, stating that the Dalai Lama often teases people he meets in an innocent and playful way, and he regrets the incident.
+SOURCES: [1],[4]
 
-QUESTION: What did the president say about Michael Jackson?
+QUESTION: How is the Saudi Arabian golf league doing?
 =========
-Content: Madam Speaker, Madam Vice President, our First Lady and Second Gentleman. Members of Congress and the Cabinet. Justices of the Supreme Court. My fellow Americans.  
+Article Snippet: The scale of the Saudi volte-face was reflected in a picture of the Saudi ambassador to Yemen sitting on a sofa in the Sana'a presidential palace next to the Houthi leader, Ali Qarshah, on Sunday.
+In November 2017, the Houthi leader was named as one of 40 Houthi terrorists for which Saudi Arabia was prepared to pay multimillion-dollar rewards in return for information on their whereabouts.
+Qarshah was priced by the Saudis at $5m (PS4.04m).
 
-Last year COVID-19 kept us apart. This year we are finally together again. 
+Diplomats from Tehran are due in Riyadh on Tuesday to start the process of reopening its long closed embassy, and a similar process is under way between Iran and Bahrain in a sign of how the Tehran-Riyadh agreement brokered on 10 March in China has the potential to upend the face of Middle East diplomacy.
 
-Tonight, we meet as Democrats Republicans and Independents. But most importantly as Americans. 
+One of Saudi Arabia's earliest tasks has been to try to reassure the internationally recognised Yemeni government based in Aden that it is not being abandoned by Riyadh and that years of fighting are not going to end with in effect a surrender.
 
-With a duty to one another to the American people to the Constitution. 
+A draft agreement presented to the Yemeni government includes a ceasefire for a period of six months in a first phase to build confidence, and then a period of negotiation for three months on managing the transitional phase, which will last for two years, during which a final solution will be negotiated between all parties.
+Article Title: Saudi Arabia makes peace proposal for Yemen after Houthi talks - The Guardian
+Publish Timestamp: Mon, Apr 10, 2023 04:39PM
+Source: [1]
 
-And with an unwavering resolve that freedom will always triumph over tyranny. 
+Article Snippet: Graham said they discussed ongoing reforms in the kingdom as well as trade between the countries.
+The Saudis announced last month that the two national airlines would order up to 121 jetliners from American aircraft manufacturer Boeing, a deal worth up to $37 billion.
 
-Six days ago, Russia’s Vladimir Putin sought to shake the foundations of the free world thinking he could make it bend to his menacing ways. But he badly miscalculated. 
+"I look forward to working with the administration and congressional Republicans and Democrats to see if we can take the U.S.-Saudi relationship to the next level, which would be a tremendous economic benefit to both countries and bring much-needed stability to a troubled region," Graham said.
+___
 
-He thought he could roll into Ukraine and the world would roll over. Instead he met a wall of strength he never imagined. 
+Associated Press writer Josh Boak and Nomaan Merchant contributed reporting.
+Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
+Publish Timestamp: UNKNOWN
+Source: [2]
 
-He met the Ukrainian people. 
+Article Snippet: Oh boy!
+That's getting carried as well!
+The 12th hole, ladies and gentlemen, with a strong breeze swirling around Amen Corner.
+Rahm's ball pitches into the azaleas to the back-left of the green, but spins back onto the fringe.
+Koepka's misses the green to the left.
+Sam Bennett's?
+Over the flag to ten feet.
+The crowd go ballistic.
+They're loving this kid.
+Who doesn't?
+This is a performance for the ages.
 
-From President Zelenskyy to every Ukrainian, their fearlessness, their courage, their determination, inspires the world. 
+3h ago 09.52 EDT Sam Bennett really is very impressive, like that's breaking news in the wake of Thursday and Friday's evidence.
+Yesterday afternoon, in dreadful conditions, he got off to an awful start, only to gather himself and make a series of nerve-steadying pars.
+This morning, he missed his first par putt, but immediately responded with a bounceback birdie on 8, and now he's walking in a very missable 12-foot par saver on 11.
+What confidence!
+The young Texan amateur remains at -6 and is made of the real stuff.
+He's got a future all right.
+Two-putt pars meanwhile for Rahm and, from just off the green, Koepka.
+-13:
+Koepka (11)
+-11: Rahm (11)
+Article Title: The Masters 2023: Koepka leads Rahm heading into final round – live - The Guardian
+Publish Timestamp: Sun, Apr 09, 2023 04:17PM
+Source: [3]
 
-Groups of citizens blocking tanks with their bodies. Everyone from students to retirees teachers turned soldiers defending their homeland.
-Publish Timestamp: Tuesday Feb 07, 2023 09:00pm
-Source: 0-pl
-Content: And we won’t stop. 
+Article Snippet: But in July, amid rising prices at the pump around the globe, Biden decided to pay a visit to Saudi Arabia.
+During the visit, he greeted the crown prince, whom he once shunned, with a fist bump.
 
-We have lost so much to COVID-19. Time with one another. And worst of all, so much loss of life. 
+Relations hit another rocky patch last fall.
 
-Let’s use this moment to reset. Let’s stop looking at COVID-19 as a partisan dividing line and see it for what it is: A God-awful disease.  
+In October, the president said there would be "consequences" for Saudi Arabia as OPEC+ alliance moved to cut oil production.
+At the time, the administration said it was reevaluating its relationship with the kingdom in light of the oil production cut that White House officials said was helping another OPEC+ member, Russia, soften the financial blow caused by U.S. and Western sanctions imposed on Moscow for its ongoing war in Ukraine.
 
-Let’s stop seeing each other as enemies, and start seeing each other for who we really are: Fellow Americans.  
-
-We can’t change how divided we’ve been. But we can change how we move forward—on COVID-19 and other issues we must face together. 
-
-I recently visited the New York City Police Department days after the funerals of Officer Wilbert Mora and his partner, Officer Jason Rivera. 
-
-They were responding to a 9-1-1 call when a man shot and killed them with a stolen gun. 
-
-Officer Mora was 27 years old. 
-
-Officer Rivera was 22. 
-
-Both Dominican Americans who’d grown up on the same streets they later chose to patrol as police officers. 
-
-I spoke with their families and told them that we are forever in debt for their sacrifice, and we will carry on their mission to restore the trust and safety every community deserves.
-Publish Timestamp: Tuesday Feb 07, 2023 09:00pm
-Source: 24-pl
-Content: And a proud Ukrainian people, who have known 30 years  of independence, have repeatedly shown that they will not tolerate anyone who tries to take their country backwards.  
-
-To all Americans, I will be honest with you, as I’ve always promised. A Russian dictator, invading a foreign country, has costs around the world. 
-
-And I’m taking robust action to make sure the pain of our sanctions  is targeted at Russia’s economy. And I will use every tool at our disposal to protect American businesses and consumers. 
-
-Tonight, I can announce that the United States has worked with 30 other countries to release 60 Million barrels of oil from reserves around the world.  
-
-America will lead that effort, releasing 30 Million barrels from our own Strategic Petroleum Reserve. And we stand ready to do more if necessary, unified with our allies.  
-
-These steps will help blunt gas prices here at home. And I know the news about what’s happening can seem alarming. 
-
-But I want you to know that we are going to be okay.
-Publish Timestamp: Tuesday Feb 07, 2023 09:00pm
-Source: 5-pl
-Content: More support for patients and families. 
-
-To get there, I call on Congress to fund ARPA-H, the Advanced Research Projects Agency for Health. 
-
-It’s based on DARPA—the Defense Department project that led to the Internet, GPS, and so much more.  
-
-ARPA-H will have a singular purpose—to drive breakthroughs in cancer, Alzheimer’s, diabetes, and more. 
-
-A unity agenda for the nation. 
-
-We can do this. 
-
-My fellow Americans—tonight , we have gathered in a sacred space—the citadel of our democracy. 
-
-In this Capitol, generation after generation, Americans have debated great questions amid great strife, and have done great things. 
-
-We have fought for freedom, expanded liberty, defeated totalitarianism and terror. 
-
-And built the strongest, freest, and most prosperous nation the world has ever known. 
-
-Now is the hour. 
-
-Our moment of responsibility. 
-
-Our test of resolve and conscience, of history itself. 
-
-It is in this moment that our character is formed. Our purpose is found. Our future is forged. 
-
-Well I know this nation.
-Source: Publish Timestamp: Tuesday Feb 07, 2023 09:00pm
-Source: 34-pl
+The administration's reaction to last week's production cut was far more subdued, with Biden saying, "It's not going to be as bad as you think.
+"
+Separately, Sen. Lindsey Graham, R-S.C., met Tuesday with the crown prince in Jeddah, Saudi Arabia.
+Graham said they discussed ongoing reforms in the kingdom as well as trade between the countries.
+The Saudis announced last month that the two national airlines would order up to 121 jetliners from American aircraft manufacturer Boeing, a deal worth up to $37 billion.
+Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
+Publish Timestamp: UNKNOWN
+Source: [4]
 =========
-FINAL ANSWER: The president did not mention Michael Jackson.
+FINAL ANSWER: I'm not sure
 SOURCES:
 
 QUESTION: {question}
