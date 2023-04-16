@@ -63,17 +63,3 @@ def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_
 
 def get_source_crawler(source):
     return lambda ndb, vdb: SourceCrawler(source, ndb, vdb)
-
-if __name__ == '__main__':
-    p = optparse.OptionParser()
-    p.add_option('--publisher')
-    p.add_option('--use_local_vector_db', action='store_true')
-    p.add_option('--use_local_news_db', action='store_true')
-    options, arguments = p.parse_args()
-
-    publisher_str = options.publisher
-    if not publisher_str:
-        raise Exception('must specify a publisher')
-
-    crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
-    crawler.run_crawler()

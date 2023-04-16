@@ -1,6 +1,7 @@
 import json
 import logging
 from query import ChatQuery
+from utilities.result_publisher import ResultPublisher
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 
 from publisher_enum import PublisherEnum
@@ -18,9 +19,10 @@ def lambda_handler(event, context):
     # publisher = body['publisher']
     url = body['url']
     inline = body.get('inline')
+    result_publisher = ResultPublisher(event, "")
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, inline)
+        qh = QueryHandler(publisher, result_publisher, inline)
         chat_result = qh.get_chat_result(chat_history, query)
         return chat_result
     except Exception as e:
@@ -54,10 +56,10 @@ def get_publisher_for_url(url):
 
 
 class QueryHandler(object):
-    def __init__(self, publisher: PublisherEnum, inline: bool):
+    def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
-        self.cq = ChatQuery(self.vector_db, inline)
+        self.cq = ChatQuery(self.vector_db, result_publisher, inline)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query)
