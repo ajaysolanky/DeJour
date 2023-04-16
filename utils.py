@@ -1,5 +1,6 @@
 import re
 import logging
+import threading
 import os, sys
 import tiktoken
 import json
@@ -125,3 +126,14 @@ def extract_body_citations_punctuation_from_sentence(text):
         body = body[:-1].strip()
 
     return body, citations, punctuation
+
+def get_thread_for_fn(fn, args):
+    resp_dict = {}
+    def wrapper(fn, args, resp_dict):
+        resp_dict['response'] = fn(*args)
+
+    t = threading.Thread(
+        target=wrapper,
+        args=[fn, args, resp_dict]
+    )
+    return (t, resp_dict)
