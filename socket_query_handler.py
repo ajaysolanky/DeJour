@@ -83,7 +83,7 @@ def _handle_query(query, url, inline, connection_id, chat_db, result_publisher):
     chat_db.update_chat_history(query, answer)
     chat_history = chat_db.get_chat_history()
     chat_history_response = json.dumps(chat_history)
-    publisher.post_to_connection(chat_history_response) # This is just for debuggings
+    result_publisher.post_to_connection(chat_history_response) # This is just for debuggings
     return {
         'statusCode': 200,
         'body': 'Query processed.'
