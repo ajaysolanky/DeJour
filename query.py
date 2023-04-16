@@ -25,8 +25,9 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, inline=False) -> None:
+    def __init__(self, vector_db, inline=False, followups=False) -> None:
         self.inline = inline
+        self.followups = followups
         self.vector_db = vector_db
         self.condense_question_prompt = PromptTemplate.from_template(CONDENSE_QUESTION_PROMPT)
         answer_question_prompt = ANSWER_QUESTION_PROMPT_INLINE if self.inline else ANSWER_QUESTION_PROMPT
@@ -67,24 +68,28 @@ class ChatQuery(Query):
         chat_history_str = fetch_q_and_docs_resp['chat_history']
         docs = fetch_q_and_docs_resp['source_documents']
 
-        followup_q_input_text = ''
-        for d in docs:
-            title = d.metadata['title']
-            article_snippet = d.page_content
-            followup_q_input_text += FOLLOWUP_Q_DOCUMENT_PROMPT.format(title=title, article_snippet=article_snippet)
-            followup_q_input_text += '\n'
-
         answer_thread, answer_resp = get_thread_for_fn(self.cvdb_chain, [fetch_q_and_docs_resp])
-        followup_q_thread, followup_q_resp = get_thread_for_fn(self.question_extraction_chain.run, [followup_q_input_text])
-
         answer_thread.start()
-        followup_q_thread.start()
+
+        if self.followups:
+            followup_q_input_text = ''
+            for d in docs:
+                title = d.metadata['title']
+                article_snippet = d.page_content
+                followup_q_input_text += FOLLOWUP_Q_DOCUMENT_PROMPT.format(title=title, article_snippet=article_snippet)
+                followup_q_input_text += '\n'
+
+            
+            followup_q_thread, followup_q_resp = get_thread_for_fn(self.question_extraction_chain.run, [followup_q_input_text])
+
+            followup_q_thread.start()
 
         answer_thread.join()
-        followup_q_thread.join()
+        if self.followups:
+            followup_q_thread.join()
 
         answer = answer_resp.get('response', {}).get('answer')
-        followup_questions = followup_q_resp.get('response', [[]])[0]
+        followup_questions = followup_q_resp.get('response', [[]])[0] if self.followups else None
 
         return {
             "answer": answer,

@@ -18,9 +18,10 @@ def lambda_handler(event, context):
     # publisher = body['publisher']
     url = body['url']
     inline = body.get('inline')
+    followups = body.get('followups')
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, inline)
+        qh = QueryHandler(publisher, inline, followups)
         chat_result = qh.get_chat_result(chat_history, query)
         return chat_result
     except Exception as e:
@@ -54,10 +55,10 @@ def get_publisher_for_url(url):
 
 
 class QueryHandler(object):
-    def __init__(self, publisher: PublisherEnum, inline: bool):
+    def __init__(self, publisher: PublisherEnum, inline: bool, followups: bool):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
-        self.cq = ChatQuery(self.vector_db, inline)
+        self.cq = ChatQuery(self.vector_db, inline, followups)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query)
