@@ -9,11 +9,13 @@ from utilities.memory_cache import ChatHistoryMemoryService
 from utilities.html_reader import HTMLReader
 from publisher_enum import PublisherEnum
 from query_handler import QueryHandler
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 app = Flask(__name__)
 chat_history_service = ChatHistoryMemoryService()
 CORS(app)
 
+#TODO: consolidate this code with lambda_handler in query_handler.py
 @app.route('/query', methods=['GET'])
 # @cross_origin(origin='*')
 def handle_query():
@@ -25,6 +27,8 @@ def handle_query():
     url = request.args['url']
     inline = request.args.get('inline') == 'True'
     followups = request.args.get('followups') == 'True'
+    streaming = request.args.get('streaming') == 'True'
+    streaming_callback = StreamingStdOutCallbackHandler() if streaming else None
 
     if not new_query:
         raise Exception("Query is empty")
@@ -41,7 +45,7 @@ def handle_query():
     
         # Call your api with the chat history and the new query 
 
-        result = answer_query(chat_history, new_query, source, inline, followups)
+        result = answer_query(chat_history, new_query, source, inline, followups, streaming, streaming_callback)
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', '*')
 
@@ -81,9 +85,9 @@ def get_publisher_for_url(url):
     else:
         raise Exception("Invalid url")
     
-def answer_query(chat_history, query, source, inline, followups):
+def answer_query(chat_history, query, source, inline, followups, streaming, streaming_callback):
     # runner = runner_dict.get(PublisherEnum(source))()
-    query_handler = QueryHandler(source, inline, followups)
+    query_handler = QueryHandler(source, inline, followups, streaming, streaming_callback)
     if query_handler:
         return query_handler.get_chat_result(chat_history, query)
     else:

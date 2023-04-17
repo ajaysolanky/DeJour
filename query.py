@@ -5,6 +5,8 @@ from langchain import OpenAI
 from langchain.chains import LLMChain, ChatVectorDBChain
 from langchain.chains.chat_vector_db.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
+from langchain.callbacks.base import CallbackManager
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 from prompts.all_prompts import ANSWER_QUESTION_PROMPT, ANSWER_QUESTION_PROMPT_INLINE, CONDENSE_QUESTION_PROMPT, DOCUMENT_PROMPT, FOLLOWUP_Q_DOCUMENT_PROMPT
 from chains.dejour_stuff_documents_chain import DejourStuffDocumentsChain
@@ -25,7 +27,7 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, inline=False, followups=False) -> None:
+    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None) -> None:
         self.inline = inline
         self.followups = followups
         self.vector_db = vector_db
@@ -33,8 +35,9 @@ class ChatQuery(Query):
         answer_question_prompt = ANSWER_QUESTION_PROMPT_INLINE if self.inline else ANSWER_QUESTION_PROMPT
         self.answer_question_prompt = PromptTemplate.from_template(answer_question_prompt)
         self.document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
-        condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
-        answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
+        condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
+        callback_manager = CallbackManager([streaming_callback]) if streaming else None
+        answer_llm = ChatOpenAI(streaming=streaming, callback_manager=callback_manager, temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION, verbose=True)
         condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
         doc_chain = DejourStuffDocumentsChain(
             llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=True),
@@ -65,6 +68,7 @@ class ChatQuery(Query):
             "chat_history": chat_history
         })
         new_question = fetch_q_and_docs_resp['question']
+        print(f"\n\nNEW QUESTION: {new_question}\n\n")
         chat_history_str = fetch_q_and_docs_resp['chat_history']
         docs = fetch_q_and_docs_resp['source_documents']
 
