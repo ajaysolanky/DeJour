@@ -1,6 +1,7 @@
 import json
 import logging
 from query import ChatQuery
+from utilities.result_publisher import ResultPublisher
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -26,7 +27,8 @@ def lambda_handler(event, context):
         streaming_callback = StreamingStdOutCallbackHandler()
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, inline, followups, streaming, streaming_callback=streaming_callback)
+        result_publisher = ResultPublisher(event, "")
+        qh = QueryHandler(publisher, result_publisher, inline, followups, streaming, streaming_callback=streaming_callback)
         chat_result = qh.get_chat_result(chat_history, query)
         return chat_result
     except Exception as e:
@@ -63,6 +65,7 @@ class QueryHandler(object):
     def __init__(
             self,
             publisher: PublisherEnum,
+            result_publisher,
             inline: bool,
             followups: bool,
             streaming: bool,
@@ -71,6 +74,7 @@ class QueryHandler(object):
         # self.vector_db = VectorDBLocal(publisher)
         self.cq = ChatQuery(
             self.vector_db,
+            result_publisher,
             inline=inline,
             followups=followups,
             streaming=streaming,
