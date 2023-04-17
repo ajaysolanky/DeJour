@@ -298,13 +298,33 @@ Follow Up Input: {question}
 Standalone question:"""
 
 DOCUMENT_PROMPT = \
-"""Article Snippet: {article_snippet}
-Article Title: {title}
+"""Article Title: {title}
+Article Snippet: {article_snippet}
 Publish Timestamp: {publish_time}
 Source: {source}"""
 
+FOLLOWUP_Q_DOCUMENT_PROMPT = \
+"""Article Title: {title}
+Article Snippet: {article_snippet}"""
 
+QUESTION_EXTRACTION_PROMPT = \
+"""You are a smart assistant designed to help readers come up with insightful followup questions.
+Given a list of news snippets extracted from articles, you must come up with a list of followup questions that readers would naturally be interested in asking next. Ensure that these questions aren't redundant.
+Respond with a list of questions in the following format:
 
+```
+[
+    "Question_1",
+    "Question_2",
+    "Question_N"
+]
+```
+
+Everything between the ``` must be valid json.
+
+Please come up with a list of questions, in the specified JSON format, for the following list of news snippets:
+----------------
+{text}"""
 
 # extra for answer question prompt
 # """QUESTION: Why is Biden in Belfast?

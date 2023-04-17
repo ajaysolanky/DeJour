@@ -7,6 +7,8 @@ from query import ChatQuery
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 from utilities.chat_history_db import ChatHistoryService, ChatHistoryDB, InMemoryDB
 from utilities.result_publisher import ResultPublisher, DebugPublisher
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain_utils.streaming_socket_callback_handler import StreamingSocketOutCallbackHandler
 
 from publisher_enum import PublisherEnum
 
@@ -135,7 +137,8 @@ class QueryHandler(object):
     def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
-        self.cq = ChatQuery(self.vector_db, result_publisher, inline)
+        streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
+        self.cq = ChatQuery(self.vector_db, result_publisher, inline, streaming=True, streaming_callback=streaming_callback)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query)

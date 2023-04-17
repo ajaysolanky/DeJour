@@ -1,12 +1,19 @@
 import re
 import json
+import threading
 from langchain import OpenAI
 from langchain.chains import LLMChain, ChatVectorDBChain
 from langchain.chains.chat_vector_db.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain.callbacks.base import CallbackManager
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-from prompts.all_prompts import ANSWER_QUESTION_PROMPT, ANSWER_QUESTION_PROMPT_INLINE, CONDENSE_QUESTION_PROMPT, DOCUMENT_PROMPT
+from prompts.all_prompts import ANSWER_QUESTION_PROMPT, ANSWER_QUESTION_PROMPT_INLINE, CONDENSE_QUESTION_PROMPT, DOCUMENT_PROMPT, FOLLOWUP_Q_DOCUMENT_PROMPT
 from chains.dejour_stuff_documents_chain import DejourStuffDocumentsChain
-from utils import split_text_into_sentences, extract_body_citations_punctuation_from_sentence
+from chains.chat_vector_db_fetch_q_and_docs_chain import ChatVectorDBFetchQAndDocsChain
+from chains.chat_vector_db_chain_intake_docs import ChatVectorDBChainIntakeDocs
+from chains.question_extraction_chain import QuestionExtractionChain
+from utils import split_text_into_sentences, extract_body_citations_punctuation_from_sentence, get_thread_for_fn
 
 class Query:
     SOURCE_FIELD_DB_MAP = {
@@ -20,16 +27,18 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, result_publisher, inline=False) -> None:
-        self.result_publisher = result_publisher
+    def __init__(self, vector_db, result_publisher, inline=False, followups=False, streaming=False, streaming_callback=None) -> None:
         self.inline = inline
+        self.result_publisher = result_publisher
+        self.followups = followups
         self.vector_db = vector_db
         self.condense_question_prompt = PromptTemplate.from_template(CONDENSE_QUESTION_PROMPT)
         answer_question_prompt = ANSWER_QUESTION_PROMPT_INLINE if self.inline else ANSWER_QUESTION_PROMPT
         self.answer_question_prompt = PromptTemplate.from_template(answer_question_prompt)
         self.document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
-        condense_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
-        answer_llm = OpenAI(temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION)
+        condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
+        callback_manager = CallbackManager([streaming_callback]) if streaming else None
+        answer_llm = ChatOpenAI(streaming=streaming, callback_manager=callback_manager, temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION, verbose=True)
         condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
         doc_chain = DejourStuffDocumentsChain(
             llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=True),
@@ -37,13 +46,61 @@ class ChatQuery(Query):
             document_prompt=self.document_prompt,
             verbose=True
         )
-        self.chain = ChatVectorDBChain(
+        #TODO: these chains were very much hacked together and need cleaning up
+        self.fetch_q_and_docs_chain = ChatVectorDBFetchQAndDocsChain(
             vectorstore=self.vector_db.get_vectorstore(),
             combine_docs_chain=doc_chain,
             question_generator=condense_question_chain,
             return_source_documents=True,
             verbose=True
         )
+        self.question_extraction_chain = QuestionExtractionChain.from_llm(ChatOpenAI(temperature = 0))
+        self.cvdb_chain = ChatVectorDBChainIntakeDocs(
+            vectorstore=self.vector_db.get_vectorstore(),
+            combine_docs_chain=doc_chain,
+            question_generator=condense_question_chain,
+            return_source_documents=True,
+            verbose=True
+        )
+
+    def run_chain(self, chat_history, query):
+        fetch_q_and_docs_resp = self.fetch_q_and_docs_chain({
+            "question": query,
+            "chat_history": chat_history
+        })
+        new_question = fetch_q_and_docs_resp['question']
+        print(f"\n\nNEW QUESTION: {new_question}\n\n")
+        chat_history_str = fetch_q_and_docs_resp['chat_history']
+        docs = fetch_q_and_docs_resp['source_documents']
+
+        answer_thread, answer_resp = get_thread_for_fn(self.cvdb_chain, [fetch_q_and_docs_resp])
+        answer_thread.start()
+
+        if self.followups:
+            followup_q_input_text = ''
+            for d in docs:
+                title = d.metadata['title']
+                article_snippet = d.page_content
+                followup_q_input_text += FOLLOWUP_Q_DOCUMENT_PROMPT.format(title=title, article_snippet=article_snippet)
+                followup_q_input_text += '\n'
+
+            
+            followup_q_thread, followup_q_resp = get_thread_for_fn(self.question_extraction_chain.run, [followup_q_input_text])
+
+            followup_q_thread.start()
+
+        answer_thread.join()
+        if self.followups:
+            followup_q_thread.join()
+
+        answer = answer_resp.get('response', {}).get('answer')
+        followup_questions = followup_q_resp.get('response', [[]])[0] if self.followups else None
+
+        return {
+            "answer": answer,
+            "source_documents": docs,
+            "followup_questions": followup_questions
+        }
 
     def answer_query_with_context(self, chat_history, query):
         if self.inline:
@@ -58,12 +115,14 @@ class ChatQuery(Query):
         query: <str>
         returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
         """
-        chain_resp = self.chain({
-            "question": query,
-            "chat_history": chat_history
-        })
+        chain_resp = self.run_chain(chat_history, query)
+        # chain_resp = self.chain({
+        #     "question": query,
+        #     "chat_history": chat_history
+        # })
         answer_and_src_idces = chain_resp['answer']
         source_docs = chain_resp['source_documents']
+        followup_qs = chain_resp['followup_questions']
         src_identifier = "SOURCES:"
         try:
             src_idx = answer_and_src_idces.lower().index(src_identifier.lower())
@@ -120,7 +179,8 @@ class ChatQuery(Query):
 
         return {
             "answer": constructed_answer,
-            "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in unique_source_docs]
+            "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in unique_source_docs],
+            "followup_questions": followup_qs
         }
 
     def answer_query_with_context_regular(self, chat_history, query):
@@ -130,12 +190,14 @@ class ChatQuery(Query):
             query: <str>
             returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
             """
-            chain_resp = self.chain({
-                "question": query,
-                "chat_history": chat_history
-            })
+            chain_resp = self.run_chain(chat_history, query)
+            # chain_resp = self.chain({
+            #     "question": query,
+            #     "chat_history": chat_history
+            # })
             answer_and_src_idces = chain_resp['answer']
             source_docs = chain_resp['source_documents']
+            followup_qs = chain_resp['followup_questions']
             src_identifier = "SOURCES:"
             try:
                 src_idx = answer_and_src_idces.lower().index(src_identifier.lower())
@@ -166,5 +228,6 @@ class ChatQuery(Query):
             source_docs = {d.metadata.get('source'):d for d in source_docs}.values() #de-dupe by source
             return {
                 "answer": answer,
-                "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in source_docs]
+                "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in source_docs],
+                "followup_questions": followup_qs
             }

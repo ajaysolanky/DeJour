@@ -3,6 +3,8 @@ import logging
 from query import ChatQuery
 from utilities.result_publisher import ResultPublisher
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 from publisher_enum import PublisherEnum
 
@@ -19,10 +21,14 @@ def lambda_handler(event, context):
     # publisher = body['publisher']
     url = body['url']
     inline = body.get('inline')
-    result_publisher = ResultPublisher(event, "")
+    followups = body.get('followups')
+    streaming = body.get('streaming')
+    if streaming:
+        streaming_callback = StreamingStdOutCallbackHandler()
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline)
+        result_publisher = ResultPublisher(event, "")
+        qh = QueryHandler(publisher, result_publisher, inline, followups, streaming, streaming_callback=streaming_callback)
         chat_result = qh.get_chat_result(chat_history, query)
         return chat_result
     except Exception as e:
@@ -56,10 +62,23 @@ def get_publisher_for_url(url):
 
 
 class QueryHandler(object):
-    def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool):
+    def __init__(
+            self,
+            publisher: PublisherEnum,
+            result_publisher,
+            inline: bool,
+            followups: bool,
+            streaming: bool,
+            streaming_callback: BaseCallbackHandler = None):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
-        self.cq = ChatQuery(self.vector_db, result_publisher, inline)
+        self.cq = ChatQuery(
+            self.vector_db,
+            result_publisher,
+            inline=inline,
+            followups=followups,
+            streaming=streaming,
+            streaming_callback=streaming_callback)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query)
