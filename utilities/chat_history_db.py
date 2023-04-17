@@ -1,7 +1,7 @@
 import boto3
 import logging
 
-dynamodb = boto3.resource('dynamodb')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 logging.getLogger().setLevel(logging.INFO)
 
 class ChatHistoryDB: 
@@ -10,11 +10,13 @@ class ChatHistoryDB:
         self.table = dynamodb.Table(self.TABLE_NAME)
 
     def put_item(self, Item):
-        self.table.put_item(Item=Item)
+        result = self.table.put_item(Item=Item)
 
-    def get_item(self, Key):
-        self.table.get_item(Key=Key)
-
+    def query(self, key_condition_expression):
+        return self.table.query(
+            KeyConditionExpression=key_condition_expression,
+            ConsistentRead=True)
+            
     def delete_item(self, Key):
         self.table.delete_item(Key=Key)
 
@@ -23,16 +25,14 @@ class InMemoryDB:
         self.db = {}
 
     def put_item(self, Item):
-        print(Item)
         connection_id = Item["connectionid"]
         self.db[connection_id] = Item
 
-    def get_item(self, Key):
-        connection_id = Key["connectionid"]
+    def query(self, KeyConditionExpression, ExpressionAttributeValues):
+        connection_id = KeyConditionExpression["connectionid"]
         item = self.db.get(connection_id)
-        print(item)
         return {
-            "Item": item
+            "Item": [item]
         }
 
     def delete_item(self, Key):
@@ -52,12 +52,12 @@ class ChatHistoryService:
         self.db.put_item(Item=data)
 
     def update_chat_history(self, question, answer):
-        response = self.db.get_item(
-            Key={
-                'connectionid': self.connectionid
-            }
-        )
-        item = response['Item']
+        response = self.db.query(key_condition_expression=boto3.dynamodb.conditions.Key('connectionid').eq(self.connectionid))
+        items = response.get('Items', None)
+        if items is None or len(items) == 0:
+            raise Exception("No chat history found")
+        
+        item = items[0]
         item['chat_history'].append({
             "question": question,
             "answer": answer
@@ -65,12 +65,11 @@ class ChatHistoryService:
         self.db.put_item(Item=item)
 
     def get_chat_history(self):
-        response = self.db.get_item(
-            Key={
-                'connectionid': self.connectionid
-            }
-        )
-        return response['Item']['chat_history']
+        response = self.db.query(key_condition_expression=boto3.dynamodb.conditions.Key('connectionid').eq(self.connectionid))
+        items = response.get('Items', None)
+        if items is None or len(items) == 0:
+            return None
+        return items[0].get('chat_history', [])
 
     def remove_chat_history(self):
         self.db.delete_item(

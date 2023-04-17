@@ -45,17 +45,18 @@ def lambda_handler(event, context):
             response['statusCode'] = 500
     elif route_key == 'query':
         logging.info("Route query")
-        try:
-            response = handle_query(connection_id, event, chat_db, result_publisher)
-        except Exception as e:
-            logging.error(f"Failed to handle query with error {e}")
-            response = {
-                'statusCode': 500,
-                'body': ('Failed to handle query with error' + str(e))
-            }
+        response = handle_query(event, chat_db, result_publisher)
+        # try:
+        #     response = handle_query(event, chat_db, result_publisher)
+        # except Exception as e:
+        #     logging.error(f"Failed to handle query with error {e}")
+        #     response = {
+        #         'statusCode': 500,
+        #         'body': ('Failed to handle query with error' + str(e))
+        #     }
     return response
 
-def handle_query(connection_id, event, chat_db, result_publisher):
+def handle_query(event, chat_db, result_publisher):
     # Handle the query event
     # Here, you can retrieve the query parameter from the request and process it
     # For example, you can print the value of the 'query' parameter
@@ -66,12 +67,15 @@ def handle_query(connection_id, event, chat_db, result_publisher):
     inline = body.get("inline", False)
     logging.info("Received query: " + query)
     
-    return _handle_query(query, url, inline, connection_id, chat_db, result_publisher)
+    return _handle_query(query, url, inline, chat_db, result_publisher)
 
-def _handle_query(query, url, inline, connection_id, chat_db, result_publisher):
+def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher):
+    logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
+    logging.info("Got chat history: " + str(chat_history))
     response = _make_query(query, url, chat_history, inline, result_publisher)
     formatted_response = json.dumps(response)
+    logging.info("Formatted response: " + formatted_response)
     result_publisher.post_to_connection(formatted_response)
 
     # Update chat history
@@ -154,11 +158,15 @@ if __name__ == '__main__':
     # p.add_option('--use_local_news_db', action='store_true')
     options, arguments = p.parse_args()
 
+    event = {
+        "body": json.dumps({"query": options.query, "url": options.url, "inline": options.inline})
+    }
     connection_id = options.connectionid
-    db = InMemoryDB()
+    db = ChatHistoryDB()
     chat_db = ChatHistoryService(connection_id, db)
     chat_db.create_chat_history()
     result_publisher = DebugPublisher()
-    result = _handle_query(options.query, options.url, options.inline, connection_id, chat_db, result_publisher)
+    result = handle_query(event, chat_db, result_publisher)
+    # result = _handle_query(options.query, options.url, options.inline, connection_id, chat_db, result_publisher)
     # crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
     # crawler.run_crawler()
