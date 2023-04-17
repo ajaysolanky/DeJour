@@ -46,7 +46,7 @@ def lambda_handler(event, context):
     elif route_key == 'query':
         logging.info("Route query")
         try:
-            response = handle_query(connection_id, event, result_publisher)
+            response = handle_query(connection_id, event, chat_db, result_publisher)
         except Exception as e:
             logging.error(f"Failed to handle query with error {e}")
             response = {
