@@ -19,6 +19,7 @@ def lambda_handler(event, context):
     query = body['query']
     # publisher = body['publisher']
     url = body['url']
+    current_article_title = body.get('article_title')
     inline = body.get('inline')
     followups = body.get('followups')
     streaming = body.get('streaming')
@@ -27,7 +28,7 @@ def lambda_handler(event, context):
     try:
         publisher = get_publisher_for_url(url)
         qh = QueryHandler(publisher, inline, followups, streaming, streaming_callback=streaming_callback)
-        chat_result = qh.get_chat_result(chat_history, query)
+        chat_result = qh.get_chat_result(chat_history, query, current_article_title)
         return chat_result
     except Exception as e:
         print(f"Get publisher failed with error: {e}")
@@ -76,5 +77,5 @@ class QueryHandler(object):
             streaming=streaming,
             streaming_callback=streaming_callback)
 
-    def get_chat_result(self, chat_history, query):
-        return self.cq.answer_query_with_context(chat_history, query)
+    def get_chat_result(self, chat_history, query, current_article_title):
+        return self.cq.answer_query_with_context(chat_history, query, current_article_title)

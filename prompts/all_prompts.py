@@ -326,6 +326,32 @@ Please come up with a list of questions, in the specified JSON format, for the f
 ----------------
 {text}"""
 
+# CURRENT_ARTICLE_QUESTION_GENERATION_PROMPT = \
+# """A reader is on a webpage reading an article and they just asked the following question:
+
+# {user_question}
+
+# Here are a few snippets I've retrieved from the article that I think may be relevant:
+# {article_snippets}
+
+# Today's date is {today_date}
+
+# Reword the user's question into a standalone question, and provide an answer to that question.
+# If you have not been provided with the context to answer the question, simply write "LACKS_CONTEXT" verbatim.
+# It is imperative that you do not make up an answer to this question, otherwise my baby child will die.
+
+# Use the following format for output:
+# ```
+# QUESTION: <write question here>
+# ANSWER: <write answer here>
+# ```
+
+# QUESTION:
+# """
+
+CURRENT_ARTICLE_FETCH_DOCUMENT_PROMPT = \
+"""The user is currently reading a news article titled: {article_title}. This is the user's question: {user_question}"""
+
 # extra for answer question prompt
 # """QUESTION: Why is Biden in Belfast?
 # =========

@@ -62,10 +62,11 @@ class ChatQuery(Query):
             verbose=True
         )
 
-    def run_chain(self, chat_history, query):
+    def run_chain(self, chat_history, query, current_article_title):
         fetch_q_and_docs_resp = self.fetch_q_and_docs_chain({
             "question": query,
-            "chat_history": chat_history
+            "chat_history": chat_history,
+            "article_title": current_article_title
         })
         new_question = fetch_q_and_docs_resp['question']
         print(f"\n\nNEW QUESTION: {new_question}\n\n")
@@ -83,7 +84,7 @@ class ChatQuery(Query):
                 followup_q_input_text += FOLLOWUP_Q_DOCUMENT_PROMPT.format(title=title, article_snippet=article_snippet)
                 followup_q_input_text += '\n'
 
-            
+
             followup_q_thread, followup_q_resp = get_thread_for_fn(self.question_extraction_chain.run, [followup_q_input_text])
 
             followup_q_thread.start()
@@ -101,20 +102,20 @@ class ChatQuery(Query):
             "followup_questions": followup_questions
         }
 
-    def answer_query_with_context(self, chat_history, query):
+    def answer_query_with_context(self, chat_history, query, current_article_title):
         if self.inline:
-            return self.answer_query_with_context_inline_citation(chat_history, query)
+            return self.answer_query_with_context_inline_citation(chat_history, query, current_article_title)
         else:
-            return self.answer_query_with_context_regular(chat_history, query)
+            return self.answer_query_with_context_regular(chat_history, query, current_article_title)
 
-    def answer_query_with_context_inline_citation(self, chat_history, query):
+    def answer_query_with_context_inline_citation(self, chat_history, query, current_article_title):
         """
         inputs:
         chat_history: [(<question1:str>, <answer1:str>), (<question2:str>, <answer2:str>), ...]
         query: <str>
         returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
         """
-        chain_resp = self.run_chain(chat_history, query)
+        chain_resp = self.run_chain(chat_history, query, current_article_title)
         # chain_resp = self.chain({
         #     "question": query,
         #     "chat_history": chat_history
@@ -182,51 +183,51 @@ class ChatQuery(Query):
             "followup_questions": followup_qs
         }
 
-    def answer_query_with_context_regular(self, chat_history, query):
-            """
-            inputs:
-            chat_history: [(<question1:str>, <answer1:str>), (<question2:str>, <answer2:str>), ...]
-            query: <str>
-            returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
-            """
-            chain_resp = self.run_chain(chat_history, query)
-            # chain_resp = self.chain({
-            #     "question": query,
-            #     "chat_history": chat_history
-            # })
-            answer_and_src_idces = chain_resp['answer']
-            source_docs = chain_resp['source_documents']
-            followup_qs = chain_resp['followup_questions']
-            src_identifier = "SOURCES:"
-            try:
-                src_idx = answer_and_src_idces.lower().index(src_identifier.lower())
-            except: #ValueError
-                src_idx = None
-            if src_idx:
-                answer = answer_and_src_idces[:src_idx]
-                src_str = answer_and_src_idces[src_idx + len(src_identifier):]
-                def extract_idx(idx_str):
-                    #TODO: move this somewhere central and consolidate w/ the code in dejour_stuff_documents_chain.py
-                    idx_pattern = r'^\[(\d+)\]$'
-                    result = re.match(idx_pattern, idx_str)
-                    if result:
-                        try:
-                            return int(result.group(1))
-                        except:
-                            pass
-                    return None
+    def answer_query_with_context_regular(self, chat_history, query, current_article_title):
+        """
+        inputs:
+        chat_history: [(<question1:str>, <answer1:str>), (<question2:str>, <answer2:str>), ...]
+        query: <str>
+        returns: (<answer:str>, [<src1:str>, <src2:str>, ...])
+        """
+        chain_resp = self.run_chain(chat_history, query, current_article_title)
+        # chain_resp = self.chain({
+        #     "question": query,
+        #     "chat_history": chat_history
+        # })
+        answer_and_src_idces = chain_resp['answer']
+        source_docs = chain_resp['source_documents']
+        followup_qs = chain_resp['followup_questions']
+        src_identifier = "SOURCES:"
+        try:
+            src_idx = answer_and_src_idces.lower().index(src_identifier.lower())
+        except: #ValueError
+            src_idx = None
+        if src_idx:
+            answer = answer_and_src_idces[:src_idx]
+            src_str = answer_and_src_idces[src_idx + len(src_identifier):]
+            def extract_idx(idx_str):
+                #TODO: move this somewhere central and consolidate w/ the code in dejour_stuff_documents_chain.py
+                idx_pattern = r'^\[(\d+)\]$'
+                result = re.match(idx_pattern, idx_str)
+                if result:
+                    try:
+                        return int(result.group(1))
+                    except:
+                        pass
+                return None
 
-                source_idces = [extract_idx(s.strip()) for s in src_str.split(',')]
-                source_idces = list(filter(lambda x: x is not None, source_idces))
-            else:
-                answer = answer_and_src_idces
-                source_idces = []
-            source_idx_dict = dict(enumerate(source_docs))
-            source_docs = [source_idx_dict.get(idx) for idx in source_idces]
-            source_docs = list(filter(lambda x: x is not None, source_docs))
-            source_docs = {d.metadata.get('source'):d for d in source_docs}.values() #de-dupe by source
-            return {
-                "answer": answer,
-                "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in source_docs],
-                "followup_questions": followup_qs
-            }
+            source_idces = [extract_idx(s.strip()) for s in src_str.split(',')]
+            source_idces = list(filter(lambda x: x is not None, source_idces))
+        else:
+            answer = answer_and_src_idces
+            source_idces = []
+        source_idx_dict = dict(enumerate(source_docs))
+        source_docs = [source_idx_dict.get(idx) for idx in source_idces]
+        source_docs = list(filter(lambda x: x is not None, source_docs))
+        source_docs = {d.metadata.get('source'):d for d in source_docs}.values() #de-dupe by source
+        return {
+            "answer": answer,
+            "sources": [{prop:fn(d.metadata) for prop,fn in self.SOURCE_FIELD_DB_MAP.items()} for d in source_docs],
+            "followup_questions": followup_qs
+        }

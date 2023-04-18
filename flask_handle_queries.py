@@ -25,6 +25,7 @@ def handle_query():
     session_id = request.args['session_id']
     # source = request.args['source']
     url = request.args['url']
+    current_article_title = request.args.get('article_title')
     inline = request.args.get('inline') == 'True'
     followups = request.args.get('followups') == 'True'
     streaming = request.args.get('streaming') == 'True'
@@ -45,7 +46,7 @@ def handle_query():
     
         # Call your api with the chat history and the new query 
 
-        result = answer_query(chat_history, new_query, source, inline, followups, streaming, streaming_callback)
+        result = answer_query(chat_history, new_query, source, inline, followups, streaming, streaming_callback, current_article_title)
         response = jsonify(result)
         response.headers.add('Access-Control-Allow-Origin', '*')
 
@@ -85,11 +86,11 @@ def get_publisher_for_url(url):
     else:
         raise Exception("Invalid url")
     
-def answer_query(chat_history, query, source, inline, followups, streaming, streaming_callback):
+def answer_query(chat_history, query, source, inline, followups, streaming, streaming_callback, current_article_title):
     # runner = runner_dict.get(PublisherEnum(source))()
     query_handler = QueryHandler(source, inline, followups, streaming, streaming_callback)
     if query_handler:
-        return query_handler.get_chat_result(chat_history, query)
+        return query_handler.get_chat_result(chat_history, query, current_article_title)
     else:
         raise Exception("Invalid source")
 
