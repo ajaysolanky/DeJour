@@ -2,6 +2,7 @@ import json
 import optparse
 import logging
 import boto3
+import time
 import uuid
 from query import ChatQuery
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
@@ -90,11 +91,21 @@ def handle_intro_query(result_publisher, event):
     if intro_questions is None:
         intro_questions = ["What are some of the top stories today?"]
 
+    message = "Hi, I'm DeJour, your personal news assistant. You can ask me questions like:"
+    message_fragments = message.split()
+    for fragment in message_fragments:
+        result_publisher.post_to_connection(json.dumps({
+            "type": "intro",
+            "message": fragment,
+            "questions": []
+        }))
+        time.sleep(0.25)
     result_publisher.post_to_connection(json.dumps({
         "type": "intro",
-        "message": "Hi, I'm DeJour, your personal news assistant. You can ask me questions like:",
+        "message": "",
         "questions": intro_questions
     }))
+    
 
     # qh = QueryHandler(publisher, result_publisher, False)
     # intro_query = ChatQuery("intro")
