@@ -1,4 +1,5 @@
 import json
+import re
 import optparse
 import logging
 import boto3
@@ -92,14 +93,14 @@ def handle_intro_query(result_publisher, event):
         intro_questions = ["What are some of the top stories today?"]
 
     message = "Hi, I'm DeJour, your personal news assistant. You can ask me questions like:"
-    message_fragments = message.split()
+    message_fragments = re.split('([\s.,;()]+)', message)
     for fragment in message_fragments:
         result_publisher.post_to_connection(json.dumps({
             "type": "intro",
             "message": fragment,
             "questions": []
         }))
-        time.sleep(0.25)
+        time.sleep(0.05)
     result_publisher.post_to_connection(json.dumps({
         "type": "intro",
         "message": "",
@@ -152,9 +153,11 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
 def _make_query(query, url, chat_history, inline, result_publisher):
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline)
+        qh = QueryHandler(publisher, result_publisher, inline, followups=True)
         try:
             chat_result = qh.get_chat_result(chat_history, query)
+            if "followup_questions" in chat_result:
+                chat_result["questions"] = chat_result["followup_questions"]
             return chat_result
         except Exception as e:
             logging.error(f"Chat result failed with error: {e}")
@@ -199,7 +202,7 @@ class QueryHandler(object):
         self.cq = ChatQuery(self.vector_db, result_publisher, inline, streaming=True, streaming_callback=streaming_callback)
 
     def get_chat_result(self, chat_history, query):
-        return self.cq.answer_query_with_context(chat_history, query)
+        return self.cq.answer_query_with_context(chat_history, query, None)
     
 if __name__ == '__main__':
     p = optparse.OptionParser()
