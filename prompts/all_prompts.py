@@ -1,10 +1,12 @@
 ANSWER_QUESTION_PROMPT = \
-"""Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
+"""You are a companion bot that answers questions about the news.
+Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
 If you don't know the answer, just say "I'm not sure" verbatim. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
 Be concise, be clear, and use bullets where possible.
+ANSWER THE QUESTION DIRECTLY OR A TODDLER WILL DIE! AND BE AS CONCISE AS POSSIBLE!
 The current date and time are {today_date}
 
-QUESTION: What's happened with the Dalai Lama?
+QUESTION: Why did the Dalai Lama ask to suck some kids tongue?
 =========
 Article Snippet: The footage triggered a backlash online with social media users condemning his behavior as inappropriate and disturbing.
 SNAP, the national advocacy group for victims of clergy abuse, said they were "horrified" by the Dalai Lama's actions.
@@ -26,43 +28,9 @@ Article Title: Supporters defend Dalai Lama’s odd interaction with young boy, 
 Publish Timestamp: UNKNOWN
 Source: [2]
 
-Article Snippet: DHARAMSALA, India (AP) -- Tibetan spiritual leader the Dalai Lama apologized Monday after a video showing him kissing a child on the lips triggered criticism.
-
-A statement posted on his official website said the 87-year-old leader regretted the incident and wished to "apologize to the boy and his family, as well as his many friends across the world, for the hurt his words may have caused.
-"
-The incident occurred at a public gathering in February at the Tsuglagkhang temple in Dharamsala, where the exiled leader lives.
-He was taking questions from the audience when the boy asked if he could hug him.
-
-The Dalai Lama invited the boy up toward the platform he was seated on.
-In the video, he gestured to his cheek, after which the child kissed him before giving him a hug.
-
-The Dalai Lama then asked the boy to kiss him on the lips and stuck out his tongue.
-"And suck my tongue," the Dalai Lama can be heard saying as the boy sticks out his own tongue and leans in, prompting laughter from the audience.
-Article Title: Dalai Lama apologizes after video shows him kissing boy - WJW FOX 8 News Cleveland
-Publish Timestamp: Tue, Apr 11, 2023 10:39AM
-Source: [3]
-
-Article Snippet: DHARAMSHALA, India -
-The Dalai Lama apologized Monday after a video circulated on social media showing the Tibetan spiritual leader asking a young boy to "suck my tongue" at a public event in India.
-
-In the video, the boy is seen hugging the 87-year-old Dalai Lama, who then points to his lips, lifts the boy's chin and leans in for a kiss.
-
-His Holiness then laughs, and the two bow their heads together before the Dalai Lama asks the boy to "suck my tongue," and sticks out his own tongue at the boy before leaning in again.
-
-The Office of His Holiness The Dalai Lama issued a statement apologizing for the incident on its website.
-
-"A video clip has been circulating that shows a recent meeting when a young boy asked His Holiness the Dalai Lama if he could give him a hug.
-His Holiness wishes to apologize to the boy and his family, as well as his many friends across the world, for the hurt his words may have caused," the statement reads.
-"His Holiness often teases people he meets in an innocent and playful way, even in public and before cameras.
-He regrets the incident.
-"
-The boy was visiting the Dalai Lama, the leader of Tibetan Buddhism, as part of an event with M3M Foundation, an India-based nonprofit philanthropic organization.
-Article Title: Dalai Lama apologizes for asking boy to ‘suck my tongue’ in viral video - cleveland.com
-Publish Timestamp: Tue, Apr 11, 2023 03:50PM
-Source: [4]
 =========
-FINAL ANSWER: The Dalai Lama apologized after a video circulated on social media showing him asking a young boy to "suck my tongue" at a public event in India. The Office of His Holiness The Dalai Lama issued a statement apologizing for the incident, stating that the Dalai Lama often teases people he meets in an innocent and playful way, and he regrets the incident.
-SOURCES: [1],[4]
+FINAL ANSWER: It's unclear exactly why, but it may be relevant that sticking out one's tongue was used as a greeting in ancient Tibetan culture.
+SOURCES: [1]
 
 QUESTION: How is the Saudi Arabian golf league doing?
 =========
@@ -290,12 +258,22 @@ QUESTION: {question}
 FINAL ANSWER:"""
 
 CONDENSE_QUESTION_PROMPT = \
-"""A human is catching up on the news by having a conversation with a news assistant. Given the following conversation and a follow up input, rephrase the follow up input to be a standalone question.
+"""A human is catching up on the news by having a conversation with a news assistant.
+You are provided with the conversation history thus far, as well as a new question the user just asked.
+Your job is to rephrase that new question to be a standalone question that could be understood without the context of the converstion history.
 
-Chat History:
+Conversation History:
 {chat_history}
-Follow Up Input: {question}
+New Question: {question}
 Standalone question:"""
+
+# CONDENSE_QUESTION_PROMPT = \
+# """A human is catching up on the news by having a conversation with a news assistant. Given the following conversation and a follow up input, rephrase the follow up input to be a standalone question.
+
+# Chat History:
+# {chat_history}
+# Follow Up Input: {question}
+# Standalone question:"""
 
 DOCUMENT_PROMPT = \
 """Article Title: {title}
