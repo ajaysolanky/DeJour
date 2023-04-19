@@ -24,8 +24,8 @@ class Query:
     }
 
 class ChatQuery(Query):
-    CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
-    CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
+    CHAT_MODEL_CONDENSE_QUESTION = 'gpt-4'
+    CHAT_MODEL_ANSWER_QUESTION = 'gpt-4'
 
     def __init__(self, vector_db, result_publisher, inline=False, followups=False, streaming=False, streaming_callback=None, verbose=True) -> None:
         self.inline = inline
