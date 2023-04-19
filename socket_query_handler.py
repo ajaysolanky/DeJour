@@ -153,7 +153,7 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
 def _make_query(query, url, chat_history, inline, result_publisher):
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline, followups=True)
+        qh = QueryHandler(publisher, result_publisher, inline)
         try:
             chat_result = qh.get_chat_result(chat_history, query)
             if "followup_questions" in chat_result:
@@ -199,7 +199,7 @@ class QueryHandler(object):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, result_publisher, inline, streaming=True, streaming_callback=streaming_callback)
+        self.cq = ChatQuery(self.vector_db, result_publisher, inline, followups=True, streaming=True, streaming_callback=streaming_callback)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query, None)
