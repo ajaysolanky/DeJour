@@ -27,8 +27,9 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None, verbose=True) -> None:
+    def __init__(self, vector_db, result_publisher, inline=False, followups=False, streaming=False, streaming_callback=None, verbose=True) -> None:
         self.inline = inline
+        self.result_publisher = result_publisher
         self.followups = followups
         self.vector_db = vector_db
         self.condense_question_prompt = PromptTemplate.from_template(CONDENSE_QUESTION_PROMPT)
