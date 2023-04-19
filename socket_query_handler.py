@@ -153,9 +153,11 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
 def _make_query(query, url, chat_history, inline, result_publisher):
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline)
+        qh = QueryHandler(publisher, result_publisher, inline, followups=True)
         try:
             chat_result = qh.get_chat_result(chat_history, query)
+            if "followup_questions" in chat_result:
+                chat_result["questions"] = chat_result["followup_questions"]
             return chat_result
         except Exception as e:
             logging.error(f"Chat result failed with error: {e}")
