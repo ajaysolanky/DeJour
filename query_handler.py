@@ -1,5 +1,7 @@
 import json
+import uuid
 import logging
+import optparse
 from query import ChatQuery
 from utilities.result_publisher import ResultPublisher
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
@@ -20,6 +22,7 @@ def lambda_handler(event, context):
     query = body['query']
     # publisher = body['publisher']
     url = body['url']
+    current_article_title = body.get('article_title')
     inline = body.get('inline')
     followups = body.get('followups')
     streaming = body.get('streaming')
@@ -69,7 +72,8 @@ class QueryHandler(object):
             inline: bool,
             followups: bool,
             streaming: bool,
-            streaming_callback: BaseCallbackHandler = None):
+            streaming_callback: BaseCallbackHandler = None,
+            verbose: bool = True):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
         self.cq = ChatQuery(
@@ -78,7 +82,46 @@ class QueryHandler(object):
             inline=inline,
             followups=followups,
             streaming=streaming,
-            streaming_callback=streaming_callback)
+            streaming_callback=streaming_callback,
+            verbose=verbose)
 
-    def get_chat_result(self, chat_history, query):
-        return self.cq.answer_query_with_context(chat_history, query)
+    def get_chat_result(self, chat_history, query, current_article_title):
+        return self.cq.answer_query_with_context(chat_history, query, current_article_title)
+
+if __name__ == '__main__':
+    p = optparse.OptionParser()
+    p.add_option('--publisher')
+    p.add_option('--current_article_title')
+    p.add_option('--inline', action='store_true', default=False)
+    p.add_option('--followups', action='store_true', default=False)
+    p.add_option('--streaming', action='store_true', default=False)
+    options, arguments = p.parse_args()
+    qh = QueryHandler(
+        publisher=PublisherEnum(options.publisher),
+        inline=options.inline,
+        followups=options.followups,
+        streaming=options.streaming,
+        streaming_callback=StreamingStdOutCallbackHandler() if options.streaming else None,
+        verbose=False
+    )
+    chat_history = []
+    while True:
+        print("What's your question?\n")
+        user_input = input()
+        resp = qh.get_chat_result(
+            chat_history=chat_history,
+            query=user_input,
+            current_article_title=options.current_article_title
+            )
+        answer = resp['answer']
+        sources = resp['sources']
+        followups = resp['followup_questions']
+        chat_history.append((user_input, answer))
+        if not options.streaming:
+            print("\n")
+            print(answer)
+            print()
+        for i, source in enumerate(sources):
+            print(f"[{i+1}]: Title: {source['title']} | URL: {source['url']}\n")
+        if options.followups:
+            print(f"Suggested Followups:\n{followups[:4]}")

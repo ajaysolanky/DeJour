@@ -11,7 +11,7 @@ from publisher_enum import PublisherEnum
 
 class WeaviateService(ABC):
     API_KEY = os.getenv('WEAVIATE_KEY', 'not the token')
-    CLUSTER_URL = "https://dejour-cluster-11g1ktu8.weaviate.network"
+    CLUSTER_URL = "https://a0fhpyrdtbkpzcd4w128hg.gcp.weaviate.cloud"
     BATCH_SIZE = 100
     TEXT_FIELD_NAME = "snippet"
 
@@ -27,7 +27,7 @@ class WeaviateService(ABC):
         return hashlib.md5(f"{url}::INDEX::{idx}".encode('utf-8')).hexdigest()
 
     def class_exists(self):
-        r = requests.get("https://dejour-cluster-11g1ktu8.weaviate.network/v1/schema", headers={"Authorization": f"Bearer {self.API_KEY}"})
+        r = requests.get(f"{self.CLUSTER_URL}/v1/schema", headers={"Authorization": f"Bearer {self.API_KEY}"})
         class_names = [el['class'] for el in r.json()['classes']]
         return self.class_name in class_names
 
@@ -99,7 +99,6 @@ class WeaviateService(ABC):
 
 class WeaviatePythonClient(WeaviateService):
     def __init__(self, publisher: PublisherEnum) -> None:
-        super().__init__(publisher)
         auth_config = weaviate.auth.AuthApiKey(api_key=self.API_KEY)
         self.client = weaviate.Client(
             url = self.CLUSTER_URL,
@@ -108,6 +107,7 @@ class WeaviatePythonClient(WeaviateService):
                 "X-OpenAI-Api-Key": os.getenv('OPENAI_API_KEY', 'not the token')
             }
         )
+        super().__init__(publisher)
 
     def create_weaviate_class(self):
         self.client.schema.create_class(self.get_class_obj())

@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class BBCSource(BaseSource):
+class BBCSource(CustomSource):
     BASE_URL = 'https://www.bbc.com'
 
     def set_categories(self):

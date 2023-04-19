@@ -169,8 +169,11 @@ class NewsDBFirestoreDatabase(NewsDB):
         query = collection_ref.where('url', 'in', urls)
         query_results = query.stream()
 
-        # Collect the 'url' values of the existing documents
-        existing_urls = set(doc.to_dict()['url'] for doc in query_results)
+        document_ids_url_map = {self.get_news_id(url): url for url in urls}
+        existing_urls = []
+        documents = [collection_ref.document(doc_id).get() for doc_id in document_ids_url_map.keys()]
+        valid_document_ids = [doc.id for doc in documents if doc.exists]
+        existing_urls = [document_ids_url_map[id] for id in valid_document_ids]
 
         return existing_urls
 

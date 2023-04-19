@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class ADSource(BaseSource):
+class ADSource(CustomSource):
     BASE_URL = 'https://www.atlantadunia.com/Dunia/NewsList.aspx'
 
     def set_categories(self):
