@@ -76,5 +76,4 @@ if __name__ == '__main__':
         raise Exception('must specify a publisher')
 
     crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
-    import pdb; pdb.set_trace()
     crawler.run_crawler()
