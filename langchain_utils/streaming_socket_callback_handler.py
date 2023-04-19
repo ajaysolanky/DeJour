@@ -20,12 +20,17 @@ class StreamingSocketOutCallbackHandler(BaseCallbackHandler):
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Run on new LLM token. Only available when streaming is enabled."""
-        self.result_publisher.post_to_connection(token)
+        message = {
+            "type": "message",
+            "message": token
+        }
+        message_json = json.dumps(message)
+        self.result_publisher.post_to_connection(message_json)
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Run when LLM ends running."""
         end_message = {
-            "action": "end"
+            "type": "end"
         }
         end_message_json = json.dumps(end_message)
         self.result_publisher.post_to_connection(end_message_json)
@@ -34,7 +39,8 @@ class StreamingSocketOutCallbackHandler(BaseCallbackHandler):
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         error_message = {
-            "action": "end"
+            "type": "error",
+            "error": str(error)
         }
         error_message_json = json.dumps(error_message)
         self.result_publisher.post_to_connection(error_message_json)

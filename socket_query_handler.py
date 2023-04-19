@@ -43,6 +43,9 @@ def lambda_handler(event, context):
         except Exception as e:
             logging.error(f"Failed to remove chat history with error {e}")
             response['statusCode'] = 500
+    elif route_key == 'intro':
+        logging.info("Route intro")
+        response = handle_intro_query(result_publisher, event)
     elif route_key == 'query':
         logging.info("Route query")
         response = handle_query(event, chat_db, result_publisher)
@@ -69,6 +72,37 @@ def handle_query(event, chat_db, result_publisher):
     
     return _handle_query(query, url, inline, chat_db, result_publisher)
 
+def handle_intro_query(result_publisher, event):
+    body = json.loads(event.get("body", ""))
+    url = body.get("url", "")
+    publisher = get_publisher_for_url(url)
+    
+    intro_questions_for_publisher = {
+        PublisherEnum.ATLANTA_DUNIA: [""],
+        PublisherEnum.BBC_INDIA: [""],
+        PublisherEnum.GOOGLE_NEWS: ["What is the latest in the Ukraine crisis?", "What are some movies that came out this week?"],
+        PublisherEnum.NBA: ["What are the biggest storylines in the NBA playoffs?", "Who's the leading scorer in the NBA playoffs?"],
+        PublisherEnum.SF_STANDARD: [""],
+        PublisherEnum.TECHCRUNCH: ["What are some startups that raised money recently?", "What are some features in the latest iOS?"],
+        PublisherEnum.VICE: ['What are some of the top stories today?']
+    }
+    intro_questions = intro_questions_for_publisher.get(publisher)
+    if intro_questions is None:
+        intro_questions = ["What are some of the top stories today?"]
+
+    result_publisher.post_to_connection(json.dumps({
+        "type": "intro",
+        "message": "Hi, I'm DeJour, your personal news assistant. You can ask me questions like:",
+        "questions": intro_questions
+    }))
+
+    # qh = QueryHandler(publisher, result_publisher, False)
+    # intro_query = ChatQuery("intro")
+    # intro_result = qh.get_chat_result([], intro_query)
+    return {
+        'statusCode': 200,
+    }
+
 def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher):
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
@@ -76,20 +110,29 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
     response = _make_query(query, url, chat_history, inline, result_publisher)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
-    result_publisher.post_to_connection(formatted_response)
+    sources = response.get("sources")
+    if sources is None:
+        logging.error("Missing sources")
+        return {
+            'statusCode': 200,
+            'body': "Missing sources"
+        }
+    sources_message = {
+        "type": "message",
+        "sources": sources
+    }
+    formatted_sources_message = json.dumps(sources_message)
+    result_publisher.post_to_connection(formatted_sources_message)
 
     # Update chat history
-    answer = response['answer']
     if response.get("error") is not None:
+        logging.error("Failed to update chat history with error: " + response['error'])
         return {
             'statusCode': 200,
             'body': response['error']
         }
-
+    answer = response['answer']
     chat_db.update_chat_history(query, answer)
-    chat_history = chat_db.get_chat_history()
-    chat_history_response = json.dumps(chat_history)
-    result_publisher.post_to_connection(chat_history_response) # This is just for debuggings
     return {
         'statusCode': 200,
         'body': 'Query processed.'
@@ -166,7 +209,8 @@ if __name__ == '__main__':
     chat_db = ChatHistoryService(connection_id, db)
     chat_db.create_chat_history()
     result_publisher = DebugPublisher()
-    result = handle_query(event, chat_db, result_publisher)
+    # result = handle_query(event, chat_db, result_publisher)
+    result = handle_intro_query(result_publisher, event)
     # result = _handle_query(options.query, options.url, options.inline, connection_id, chat_db, result_publisher)
     # crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
     # crawler.run_crawler()
