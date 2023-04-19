@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class ViceSource(BaseSource):
+class ViceSource(CustomSource):
     BASE_URL = 'https://www.vice.com/'
     USE_PYPPETEER = True
 

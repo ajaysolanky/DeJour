@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class TechCrunchSource(BaseSource):
+class TechCrunchSource(CustomSource):
     BASE_URL = 'https://techcrunch.com'
 
     def set_categories(self):

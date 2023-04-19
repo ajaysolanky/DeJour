@@ -5,7 +5,7 @@ from newspaper.source import Source
 from newspaper.utils import extend_config
 from newspaper.configuration import Configuration
 
-class BaseSource(Source):
+class CustomSource(Source):
     BASE_URL = ''
     USE_PYPPETEER = False
 

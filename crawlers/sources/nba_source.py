@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class NBASource(BaseSource):
+class NBASource(CustomSource):
     USE_PYPPETEER = True
     BASE_URL = 'https://www.nba.com/'
 

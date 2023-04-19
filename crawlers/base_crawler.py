@@ -5,11 +5,12 @@ from collections import defaultdict
 from newspaper import Article
 from datetime import datetime
 import pytz
+from abc import ABC, abstractmethod
 
 from text_splitter import HardTokenSpacyTextSplitter
 from utils import HiddenPrints, TokenCountCalculator, unstructured_time_string_to_structured, get_isoformat_and_add_tz_if_not_there
 
-class BaseCrawler:
+class BaseCrawler(ABC):
     CHUNK_SIZE_TOKENS = 300
     CHUNK_OVERLAP_TOKENS = int(CHUNK_SIZE_TOKENS * .2)
     SEPARATOR = '\n'
@@ -23,8 +24,9 @@ class BaseCrawler:
         self.failed_dl_cache = set()
         self.get_num_tokens = TokenCountCalculator().get_num_tokens
 
+    @abstractmethod
     def fetch_news_df(self):
-        raise NotImplementedError()
+        pass
     
     def augment_data(self, url):
             print (f"fetching article @ url: {url}")

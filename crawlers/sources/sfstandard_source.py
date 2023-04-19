@@ -1,9 +1,9 @@
 
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class SFStandardSource(BaseSource):
+class SFStandardSource(CustomSource):
     BASE_URL = 'https://sfstandard.com/'
 
     def set_categories(self):

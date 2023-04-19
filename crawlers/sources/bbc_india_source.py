@@ -1,8 +1,8 @@
 from newspaper.source import Category
 
-from .base_source import BaseSource
+from .custom_source import CustomSource
 
-class BBCIndiaSource(BaseSource):
+class BBCIndiaSource(CustomSource):
     BASE_URL = 'https://www.bbc.com/news/world/asia/india'
     USE_PYPPETEER = True
 

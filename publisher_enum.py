@@ -5,6 +5,7 @@ class PublisherEnum(Enum):
     BBC_INDIA = 'bbc_india'
     GOOGLE_NEWS = 'google_news'
     NBA = 'nba'
+    NY_TIMES = 'ny_times'
     SF_STANDARD = 'sf_standard'
     TECHCRUNCH = 'techcrunch'
     VICE = 'vice'

@@ -27,7 +27,7 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None) -> None:
+    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None, verbose=True) -> None:
         self.inline = inline
         self.followups = followups
         self.vector_db = vector_db
@@ -37,13 +37,13 @@ class ChatQuery(Query):
         self.document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
         condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         callback_manager = CallbackManager([streaming_callback]) if streaming else None
-        answer_llm = ChatOpenAI(streaming=streaming, callback_manager=callback_manager, temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION, verbose=True)
-        condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=True)
+        answer_llm = ChatOpenAI(streaming=streaming, callback_manager=callback_manager, temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION, verbose=verbose)
+        condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=verbose)
         doc_chain = DejourStuffDocumentsChain(
-            llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=True),
+            llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=verbose),
             document_variable_name="summaries",
             document_prompt=self.document_prompt,
-            verbose=True
+            verbose=verbose
         )
         #TODO: these chains were very much hacked together and need cleaning up
         self.fetch_q_and_docs_chain = ChatVectorDBFetchQAndDocsChain(
@@ -51,7 +51,7 @@ class ChatQuery(Query):
             combine_docs_chain=doc_chain,
             question_generator=condense_question_chain,
             return_source_documents=True,
-            verbose=True
+            verbose=verbose
         )
         self.question_extraction_chain = QuestionExtractionChain.from_llm(ChatOpenAI(temperature = 0))
         self.cvdb_chain = ChatVectorDBChainIntakeDocs(
@@ -59,7 +59,7 @@ class ChatQuery(Query):
             combine_docs_chain=doc_chain,
             question_generator=condense_question_chain,
             return_source_documents=True,
-            verbose=True
+            verbose=verbose
         )
 
     def run_chain(self, chat_history, query, current_article_title):
