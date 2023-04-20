@@ -1,4 +1,5 @@
 import pytz
+import copy
 import logging
 import requests
 # from ghost import Ghost
@@ -23,6 +24,9 @@ from lxml import html
 from newspaper import fulltext
 import dateutil.parser
 from newspaper import Article
+from newspaper.cleaners import DocumentCleaner
+from newspaper.videos.extractors import VideoExtractor
+from newspaper.outputformatters import OutputFormatter
 
 from .base_crawler import BaseCrawler
 from utils import get_isoformat_and_add_tz_if_not_there
@@ -119,7 +123,7 @@ class NYTCrawler(BaseCrawler):
         return news_df
 
     def get_article_from_url(self, url):
-        article = newspaper.Article(url=url, language='en')
+        article = NYTArticle(url=url, language='en')
         article.download()
         article.parse()
 
@@ -134,24 +138,92 @@ class NYTCrawler(BaseCrawler):
             "summary": str(article.summary)
         }
 
-        all_nodes = article.get_all_nodes()
-        return all_nodes
+        return formatted_article
 
-    # def augment_data(self, url):
-    #     print (f"fetching article @ url: {url}")
-    #     article = Article(url=url)
-    #     try:
-    #         article.download()
-    #         article.parse()
-    #     except:
-    #         article = None
-    #     if article is None:
-    #         article = object()
-    #     return pd.Series({
-    #         "text": getattr(article, "text", None),
-    #         "preview": None,
-    #         "top_image_url": getattr(article, "top_image", None),
-    #         "authors": ','.join(getattr(article, "authors", [])),
-    #         "publish_timestamp": get_isoformat_and_add_tz_if_not_there(getattr(article, "publish_date", None)),
-    #         "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
-    #     })
+class NYTArticle(Article):
+    def parse(self):
+        self.throw_if_not_downloaded_verbose()
+
+        self.doc = self.config.get_parser().fromstring(self.html)
+        self.clean_doc = copy.deepcopy(self.doc)
+
+        if self.doc is None:
+            # `parse` call failed, return nothing
+            return
+
+        # TODO: Fix this, sync in our fix_url() method
+        parse_candidate = self.get_parse_candidate()
+        self.link_hash = parse_candidate.link_hash  # MD5
+
+        document_cleaner = DocumentCleaner(self.config)
+        output_formatter = OutputFormatter(self.config)
+
+        title = self.extractor.get_title(self.clean_doc)
+        self.set_title(title)
+
+        authors = self.extractor.get_authors(self.clean_doc)
+        self.set_authors(authors)
+
+        meta_lang = self.extractor.get_meta_lang(self.clean_doc)
+        self.set_meta_language(meta_lang)
+
+        if self.config.use_meta_language:
+            self.extractor.update_language(self.meta_lang)
+            output_formatter.update_language(self.meta_lang)
+
+        meta_favicon = self.extractor.get_favicon(self.clean_doc)
+        self.set_meta_favicon(meta_favicon)
+
+        meta_description = \
+            self.extractor.get_meta_description(self.clean_doc)
+        self.set_meta_description(meta_description)
+
+        canonical_link = self.extractor.get_canonical_link(
+            self.url, self.clean_doc)
+        self.set_canonical_link(canonical_link)
+
+        tags = self.extractor.extract_tags(self.clean_doc)
+        self.set_tags(tags)
+
+        meta_keywords = self.extractor.get_meta_keywords(
+            self.clean_doc)
+        self.set_meta_keywords(meta_keywords)
+
+        meta_data = self.extractor.get_meta_data(self.clean_doc)
+        self.set_meta_data(meta_data)
+
+        self.publish_date = self.extractor.get_publishing_date(
+            self.url,
+            self.clean_doc)
+
+        # Before any computations on the body, clean DOM object
+        self.doc = document_cleaner.clean(self.doc)
+        
+        from lxml.cssselect import CSSSelector
+        selector = CSSSelector('div.StoryBodyCompanionColumn')
+        top_nodes = selector(self.doc)
+        # self.top_node = self.extractor.calculate_best_node(self.doc)
+        self.top_node = top_nodes[0]
+        if self.top_node is not None:
+            video_extractor = VideoExtractor(self.config, self.top_node)
+            self.set_movies(video_extractor.get_videos())
+
+            top_nodes = [self.extractor.post_cleanup(tn) for tn in top_nodes]
+            self.top_node = top_nodes[0]
+            # self.top_node = self.extractor.post_cleanup(self.top_node)
+            self.clean_top_node = copy.deepcopy(self.top_node)
+
+            full_text, full_article_html = "", ""
+            for node in top_nodes:
+                text, article_html = output_formatter.get_formatted(
+                    node)
+                full_text += text + "\n"
+                full_article_html += article_html
+            if len(full_text) <= 32500:
+                self.set_article_html(full_article_html)
+                self.set_text(full_text)
+
+        self.fetch_images()
+
+        self.is_parsed = True
+        self.release_resources()

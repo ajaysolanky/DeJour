@@ -1,103 +1,60 @@
 ANSWER_QUESTION_PROMPT = \
-"""You are a companion bot that answers questions about the news.
-Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
+"""Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
 If you don't know the answer, just say "I'm not sure" verbatim. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
 Be concise, be clear, and use bullets where possible.
 ANSWER THE QUESTION DIRECTLY OR A TODDLER WILL DIE! AND BE AS CONCISE AS POSSIBLE!
+DO NOT WRITE ANYTHING THAT IS NOT USEFUL FOR DIRECTLY ANSWERING THE QUESTION!
 The current date and time are {today_date}
 
-QUESTION: Why did the Dalai Lama ask to suck some kids tongue?
+QUESTION: What was the size of the meta layoffs this week?
 =========
-Article Snippet: The footage triggered a backlash online with social media users condemning his behavior as inappropriate and disturbing.
-SNAP, the national advocacy group for victims of clergy abuse, said they were "horrified" by the Dalai Lama's actions.
-"Our primary concern is with the innocent boy who was the subject of this disgusting request by a revered spiritual figure," the group said in a statement.
-
-Sticking out one's tongue was often used as a greeting according to ancient Tibetan culture, but is not commonly seen anymore.
-
-"His Holiness often teases people he meets in an innocent and playful way, even in public and before cameras," the statement from the Dalai Lama read.
-
-Article Title: Dalai Lama apologizes after video shows him kissing boy - WJW FOX 8 News Cleveland
-Publish Timestamp: Tue, Apr 11, 2023 10:39AM
+Article Title: Daily Crunch: Meta is dismissing around 4,000 more employees this week
+Article Snippet: : Reports suggest that Meta is planning to cut another 4,000 jobs this week, Rebecca writes.
+If you are keeping track at home, this is in addition to an announcement made in March to cut 10,000 jobs and 11,000 jobs that were cut in November.
+Publish Timestamp: Wed, Apr 19, 2023 12:00AM
 Source: [1]
 
-Article Snippet: CHINA INTERFERENCE IN SUCCESSION OF NEXT DALAI LAMA SLAMMED BY SEN. RISCH
-The Dalai Lama currently lives in India and is considered by China to be a criminal separatist after he fled Tibet following a failed uprising against China in 1959.
+Article Title: A comprehensive list of 2023 tech layoffs
+Article Snippet: Announced on March 6, Atlassian is laying off about 500 employees, or 5% of its total workforce.
 
-Video of Monday's incident has already racked up millions of views across social media.
-Article Title: Supporters defend Dalai Lama’s odd interaction with young boy, point to Tibet’s history of 'tongue greetings' - Fox News
-Publish Timestamp: UNKNOWN
+Announced on March 6, the company laid off 475 employees, or 8% of its total workforce.
+
+The Nigerian B2B e-commerce platform had a headcount of more than 2,000 before a first round of layoffs in September 2022.
+Alerzo has laid off 15% of its full-time workforce, the company confirmed on March 6, leaving about 800 employees at the startup.
+Publish Timestamp: Wed, Apr 19, 2023 12:00AM
 Source: [2]
-
 =========
-FINAL ANSWER: It's unclear exactly why, but it may be relevant that sticking out one's tongue was used as a greeting in ancient Tibetan culture.
+FINAL ANSWER: Meta is dismissing 4,000 more employees this week.
 SOURCES: [1]
 
 QUESTION: How is the Saudi Arabian golf league doing?
 =========
+Article Title: Saudi Arabia makes peace proposal for Yemen after Houthi talks - The Guardian
 Article Snippet: The scale of the Saudi volte-face was reflected in a picture of the Saudi ambassador to Yemen sitting on a sofa in the Sana'a presidential palace next to the Houthi leader, Ali Qarshah, on Sunday.
 In November 2017, the Houthi leader was named as one of 40 Houthi terrorists for which Saudi Arabia was prepared to pay multimillion-dollar rewards in return for information on their whereabouts.
 Qarshah was priced by the Saudis at $5m (PS4.04m).
-
-Diplomats from Tehran are due in Riyadh on Tuesday to start the process of reopening its long closed embassy, and a similar process is under way between Iran and Bahrain in a sign of how the Tehran-Riyadh agreement brokered on 10 March in China has the potential to upend the face of Middle East diplomacy.
-
-One of Saudi Arabia's earliest tasks has been to try to reassure the internationally recognised Yemeni government based in Aden that it is not being abandoned by Riyadh and that years of fighting are not going to end with in effect a surrender.
-
-A draft agreement presented to the Yemeni government includes a ceasefire for a period of six months in a first phase to build confidence, and then a period of negotiation for three months on managing the transitional phase, which will last for two years, during which a final solution will be negotiated between all parties.
-Article Title: Saudi Arabia makes peace proposal for Yemen after Houthi talks - The Guardian
 Publish Timestamp: Mon, Apr 10, 2023 04:39PM
 Source: [1]
 
+Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
 Article Snippet: Graham said they discussed ongoing reforms in the kingdom as well as trade between the countries.
 The Saudis announced last month that the two national airlines would order up to 121 jetliners from American aircraft manufacturer Boeing, a deal worth up to $37 billion.
-
-"I look forward to working with the administration and congressional Republicans and Democrats to see if we can take the U.S.-Saudi relationship to the next level, which would be a tremendous economic benefit to both countries and bring much-needed stability to a troubled region," Graham said.
-___
-
-Associated Press writer Josh Boak and Nomaan Merchant contributed reporting.
-Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
 Publish Timestamp: UNKNOWN
 Source: [2]
 
+Article Title: The Masters 2023: Koepka leads Rahm heading into final round – live - The Guardian
 Article Snippet: Oh boy!
 That's getting carried as well!
 The 12th hole, ladies and gentlemen, with a strong breeze swirling around Amen Corner.
 Rahm's ball pitches into the azaleas to the back-left of the green, but spins back onto the fringe.
 Koepka's misses the green to the left.
 Sam Bennett's?
-Over the flag to ten feet.
-The crowd go ballistic.
-They're loving this kid.
-Who doesn't?
-This is a performance for the ages.
-
-3h ago 09.52 EDT Sam Bennett really is very impressive, like that's breaking news in the wake of Thursday and Friday's evidence.
-Yesterday afternoon, in dreadful conditions, he got off to an awful start, only to gather himself and make a series of nerve-steadying pars.
-This morning, he missed his first par putt, but immediately responded with a bounceback birdie on 8, and now he's walking in a very missable 12-foot par saver on 11.
-What confidence!
-The young Texan amateur remains at -6 and is made of the real stuff.
-He's got a future all right.
-Two-putt pars meanwhile for Rahm and, from just off the green, Koepka.
--13:
-Koepka (11)
--11: Rahm (11)
-Article Title: The Masters 2023: Koepka leads Rahm heading into final round – live - The Guardian
 Publish Timestamp: Sun, Apr 09, 2023 04:17PM
 Source: [3]
 
+Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
 Article Snippet: But in July, amid rising prices at the pump around the globe, Biden decided to pay a visit to Saudi Arabia.
 During the visit, he greeted the crown prince, whom he once shunned, with a fist bump.
-
-Relations hit another rocky patch last fall.
-
-In October, the president said there would be "consequences" for Saudi Arabia as OPEC+ alliance moved to cut oil production.
-At the time, the administration said it was reevaluating its relationship with the kingdom in light of the oil production cut that White House officials said was helping another OPEC+ member, Russia, soften the financial blow caused by U.S. and Western sanctions imposed on Moscow for its ongoing war in Ukraine.
-
-The administration's reaction to last week's production cut was far more subdued, with Biden saying, "It's not going to be as bad as you think.
-"
-Separately, Sen. Lindsey Graham, R-S.C., met Tuesday with the crown prince in Jeddah, Saudi Arabia.
-Graham said they discussed ongoing reforms in the kingdom as well as trade between the countries.
-The Saudis announced last month that the two national airlines would order up to 121 jetliners from American aircraft manufacturer Boeing, a deal worth up to $37 billion.
-Article Title: Biden aide, Saudi prince see 'progress' toward Yemen war end - Yahoo News
 Publish Timestamp: UNKNOWN
 Source: [4]
 =========
@@ -115,7 +72,7 @@ ANSWER_QUESTION_PROMPT_INLINE = \
 
 Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
 If you don't know the answer, just say "I'm not sure" verbatim. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
-Be concise, be clear, and use bullets where possible.
+Be concise, be clear, use bullets where possible, and add a newline after every bullet.
 Provide inline citations in the format of[x].
 The current date and time are {today_date}
 

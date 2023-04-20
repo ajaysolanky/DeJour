@@ -12,7 +12,8 @@ class ChatHistoryDB:
     def put_item(self, Item):
         result = self.table.put_item(Item=Item)
 
-    def query(self, key_condition_expression):
+    def query(self, connection_id):
+        key_condition_expression = boto3.dynamodb.conditions.Key('connectionid').eq(connection_id)
         return self.table.query(
             KeyConditionExpression=key_condition_expression,
             ConsistentRead=True)
@@ -28,11 +29,10 @@ class InMemoryDB:
         connection_id = Item["connectionid"]
         self.db[connection_id] = Item
 
-    def query(self, KeyConditionExpression, ExpressionAttributeValues):
-        connection_id = KeyConditionExpression["connectionid"]
+    def query(self, connection_id):
         item = self.db.get(connection_id)
         return {
-            "Item": [item]
+            "Items": [item]
         }
 
     def delete_item(self, Key):
@@ -52,7 +52,7 @@ class ChatHistoryService:
         self.db.put_item(Item=data)
 
     def update_chat_history(self, question, answer):
-        response = self.db.query(key_condition_expression=boto3.dynamodb.conditions.Key('connectionid').eq(self.connectionid))
+        response = self.db.query(self.connectionid)
         items = response.get('Items', None)
         if items is None or len(items) == 0:
             raise Exception("No chat history found")
@@ -65,7 +65,7 @@ class ChatHistoryService:
         self.db.put_item(Item=item)
 
     def get_chat_history(self):
-        response = self.db.query(key_condition_expression=boto3.dynamodb.conditions.Key('connectionid').eq(self.connectionid))
+        response = self.db.query(self.connectionid)
         items = response.get('Items', None)
         if items is None or len(items) == 0:
             return None

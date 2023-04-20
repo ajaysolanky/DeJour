@@ -17,6 +17,8 @@ from publisher_enum import PublisherEnum
 dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
 
+HISTORY_LOOKBACK_LEN = 3
+
 def lambda_handler(event, context):
     response = {'statusCode': 200}
     # get necessary request context
@@ -70,9 +72,10 @@ def handle_query(event, chat_db, result_publisher):
     query = body.get("query", "")
     url = body.get("url", "")
     inline = body.get("inline", False)
+    followups = body.get("followups", False)
     logging.info("Received query: " + query)
     
-    return _handle_query(query, url, inline, chat_db, result_publisher)
+    return _handle_query(query, url, inline, chat_db, result_publisher, followups)
 
 def handle_intro_query(result_publisher, event):
     body = json.loads(event.get("body", ""))
@@ -115,11 +118,11 @@ def handle_intro_query(result_publisher, event):
         'statusCode': 200,
     }
 
-def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher):
+def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher, followups):
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
     logging.info("Got chat history: " + str(chat_history))
-    response = _make_query(query, url, chat_history, inline, result_publisher)
+    response = _make_query(query, url, chat_history, inline, result_publisher, followups)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
     sources = response.get("sources")
@@ -150,12 +153,14 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
         'body': 'Query processed.'
     }
 
-def _make_query(query, url, chat_history, inline, result_publisher):
+def _make_query(query, url, chat_history, inline, result_publisher, followups):
+    chat_history_tups = [(e['question'], e['answer']) for e in chat_history]
+    chat_history_tups = chat_history_tups[-1*HISTORY_LOOKBACK_LEN:]
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline, followups=True)
+        qh = QueryHandler(publisher, result_publisher, inline, followups=followups, verbose=True)
         try:
-            chat_result = qh.get_chat_result(chat_history, query)
+            chat_result = qh.get_chat_result(chat_history_tups, query)
             if "followup_questions" in chat_result:
                 chat_result["questions"] = chat_result["followup_questions"]
             return chat_result
@@ -195,11 +200,11 @@ def get_publisher_for_url(url):
         raise Exception("Invalid url")
     
 class QueryHandler(object):
-    def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool):
+    def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
         self.vector_db = VectorDBWeaviateCURL(publisher)
         # self.vector_db = VectorDBLocal(publisher)
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, result_publisher, inline, streaming=True, streaming_callback=streaming_callback)
+        self.cq = ChatQuery(self.vector_db, result_publisher, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query, None)
@@ -208,23 +213,25 @@ if __name__ == '__main__':
     p = optparse.OptionParser()
     p.add_option('--url', default="https://www.news.google.com")
     p.add_option('--inline', action='store_true')
+    p.add_option('--followups', action='store_true')
     random_connection_id = str(uuid.uuid4())
-    random_query = "What is the biggest news today?"
-    p.add_option('--query', default=random_query)
+    # random_query = "What is the biggest news today?"
+    # p.add_option('--query', default=random_query)
     p.add_option('--connectionid', default=random_connection_id)
     # p.add_option('--use_local_news_db', action='store_true')
     options, arguments = p.parse_args()
 
-    event = {
-        "body": json.dumps({"query": options.query, "url": options.url, "inline": options.inline})
-    }
     connection_id = options.connectionid
-    db = ChatHistoryDB()
+    db = InMemoryDB()
     chat_db = ChatHistoryService(connection_id, db)
     chat_db.create_chat_history()
     result_publisher = DebugPublisher()
-    # result = handle_query(event, chat_db, result_publisher)
-    result = handle_intro_query(result_publisher, event)
-    # result = _handle_query(options.query, options.url, options.inline, connection_id, chat_db, result_publisher)
-    # crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
-    # crawler.run_crawler()
+
+    while True:
+        print("\nHow can I help you?\n")
+        query = input()
+        event = {
+            "body": json.dumps({"query": query, "url": options.url, "inline": options.inline, "followups": options.followups})
+        }
+        
+        result = handle_query(event, chat_db, result_publisher)

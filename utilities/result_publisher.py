@@ -1,3 +1,4 @@
+import json
 import boto3
 import logging
 
@@ -16,4 +17,5 @@ class ResultPublisher:
 
 class DebugPublisher:
     def post_to_connection(self, message):
-        logging.info('DebugPublisher: {}'.format(message))
+        msg_json = json.loads(message)
+        print(msg_json.get('message'), end='', flush=True)
