@@ -13,6 +13,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_utils.streaming_socket_callback_handler import StreamingSocketOutCallbackHandler
 
 from publisher_enum import PublisherEnum
+from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet
 
 dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
@@ -201,7 +202,8 @@ def get_publisher_for_url(url):
     
 class QueryHandler(object):
     def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
-        self.vector_db = VectorDBWeaviateCURL(publisher)
+        args = {"weaviate_class": WeaviateClassArticleSnippet(publisher.value)}
+        self.vector_db = VectorDBWeaviateCURL(publisher, args)
         # self.vector_db = VectorDBLocal(publisher)
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
         self.cq = ChatQuery(self.vector_db, result_publisher, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose)
