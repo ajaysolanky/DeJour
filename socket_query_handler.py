@@ -246,6 +246,7 @@ if __name__ == '__main__':
     p = optparse.OptionParser()
     p.add_option('--url')
     p.add_option('--inline', action='store_true')
+    p.add_option('--summarize', action='store_true')
     p.add_option('--followups', action='store_true')
     random_connection_id = str(uuid.uuid4())
     p.add_option('--connectionid', default=random_connection_id)
@@ -270,25 +271,26 @@ if __name__ == '__main__':
     event = get_event('$connect', {"url": options.url})
     connect_resp = lambda_handler(event, None)
     assert connect_resp['statusCode'] == 200
+    
+    if options.summarize:
+        event = get_event('summarize', {
+            'url': options.url,
+            'inline': options.inline,
+            'followups': options.followups
+        })
 
-    event = get_event('summarize', {
-        'url': options.url,
-        'inline': options.inline,
-        'followups': options.followups
-    })
-
-    result = lambda_handler(event, None)
-    assert result['statusCode'] == 200
-
-    # while True:
-    #     print("\nHow can I help you?\n")
-    #     query = input()
-    #     event = get_event('query', {
-    #         'query': query,
-    #         'url': options.url,
-    #         'inline': options.inline,
-    #         'followups': options.followups
-    #     })
-        
-    #     result = lambda_handler(event, None)
-    #     assert result['statusCode'] == 200
+        result = lambda_handler(event, None)
+        assert result['statusCode'] == 200
+    else:
+        while True:
+            print("\nHow can I help you?\n")
+            query = input()
+            event = get_event('query', {
+                'query': query,
+                'url': options.url,
+                'inline': options.inline,
+                'followups': options.followups
+            })
+            
+            result = lambda_handler(event, None)
+            assert result['statusCode'] == 200
