@@ -43,7 +43,13 @@ class ChatQuery(Query):
         self.document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
         condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         callback_manager = CallbackManager([streaming_callback]) if streaming else None
-        answer_llm = ChatOpenAI(streaming=streaming, callback_manager=callback_manager, temperature=0, model_name=self.CHAT_MODEL_ANSWER_QUESTION, verbose=verbose)
+        answer_llm = ChatOpenAI(
+            streaming=streaming,
+            callback_manager=callback_manager,
+            temperature=0,
+            model_name=self.CHAT_MODEL_ANSWER_QUESTION,
+            verbose=verbose
+            )
         condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=verbose)
         doc_chain = DejourStuffDocumentsChain(
             llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=verbose),

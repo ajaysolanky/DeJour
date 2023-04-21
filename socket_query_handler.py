@@ -14,11 +14,12 @@ from langchain_utils.streaming_socket_callback_handler import StreamingSocketOut
 
 from publisher_enum import PublisherEnum
 from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet, WeaviateClassBookSnippet
+from utils import get_article_info_from_url
 
 dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
 
-HISTORY_LOOKBACK_LEN = 3
+HISTORY_LOOKBACK_LEN = 5
 
 def lambda_handler(event, context):
     response = {'statusCode': 200}
@@ -29,13 +30,18 @@ def lambda_handler(event, context):
         return {'statusCode': 400}
     logging.info(f"Successfully invoked! with route_key: {route_key}")
 
-    db = ChatHistoryDB()
+    local = event.get('requestContext', {}).get('local', False)
+    db = event.get('requestContext')['in_mem_db'] if local else ChatHistoryDB()
     chat_db = ChatHistoryService(connection_id, db)
-    result_publisher = ResultPublisher(event, connection_id)
+    result_publisher = DebugPublisher() if local else ResultPublisher(event, connection_id)
+    body = json.loads(event.get("body", "{}"))
     if route_key == '$connect':
         logging.info("Route connect")
         try:
             chat_db.create_chat_history()
+            url = body.get("url")
+            article = get_article_info_from_url(url)
+            chat_db.update_cur_article_info({'title': article.title})
             response['statusCode'] = 200
         except Exception as e:
             logging.error(f"Failed to create chat history with error {e}")
@@ -53,7 +59,10 @@ def lambda_handler(event, context):
         response = handle_intro_query(result_publisher, event)
     elif route_key == 'query':
         logging.info("Route query")
-        response = handle_query(event, chat_db, result_publisher)
+        response = handle_query(body, chat_db, result_publisher)
+    elif route_key == 'summarize':
+        logging.info('Route summarize')
+        response = handle_summarize(body, chat_db, result_publisher)
         # try:
         #     response = handle_query(event, chat_db, result_publisher)
         # except Exception as e:
@@ -64,12 +73,21 @@ def lambda_handler(event, context):
         #     }
     return response
 
-def handle_query(event, chat_db, result_publisher):
+def handle_summarize(body, chat_db: ChatHistoryService, result_publisher):
+    logging.info("Received summarize body: " + json.dumps(body))
+    query = "Summarize this article"
+    url = body.get("url", "")
+    inline = body.get("inline", False)
+    followups = body.get("followups", False)
+    logging.info(f"Received summarization request for url: {url}")
+
+    return _handle_query(query, url, inline, chat_db, result_publisher, followups)
+
+def handle_query(body, chat_db, result_publisher):
     # Handle the query event
     # Here, you can retrieve the query parameter from the request and process it
     # For example, you can print the value of the 'query' parameter
-    body = json.loads(event.get("body", ""))
-    logging.info("Received query body: " + str(body))
+    logging.info("Received query body: " + json.dumps(body))
     query = body.get("query", "")
     url = body.get("url", "")
     inline = body.get("inline", False)
@@ -123,7 +141,8 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
     logging.info("Got chat history: " + str(chat_history))
-    response = _make_query(query, url, chat_history, inline, result_publisher, followups)
+    cur_article_info = chat_db.get_cur_article_info()
+    response = _make_query(query, url, chat_history, inline, result_publisher, followups, cur_article_info)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
     sources = response.get("sources")
@@ -154,14 +173,14 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
         'body': 'Query processed.'
     }
 
-def _make_query(query, url, chat_history, inline, result_publisher, followups):
+def _make_query(query, url, chat_history, inline, result_publisher, followups, cur_article_info):
     chat_history_tups = [(e['question'], e['answer']) for e in chat_history]
     chat_history_tups = chat_history_tups[-1*HISTORY_LOOKBACK_LEN:]
     try:
         publisher = get_publisher_for_url(url)
         qh = QueryHandler(publisher, result_publisher, inline, followups=followups, verbose=True)
         try:
-            chat_result = qh.get_chat_result(chat_history_tups, query)
+            chat_result = qh.get_chat_result(chat_history_tups, query, cur_article_info)
             if "followup_questions" in chat_result:
                 chat_result["questions"] = chat_result["followup_questions"]
             return chat_result
@@ -216,32 +235,56 @@ class QueryHandler(object):
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
         self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
 
-    def get_chat_result(self, chat_history, query):
-        return self.cq.answer_query_with_context(chat_history, query, None)
+    def get_chat_result(self, chat_history, query, cur_article_info):
+        return self.cq.answer_query_with_context(chat_history, query, cur_article_info.get('title'))
 
 if __name__ == '__main__':
     p = optparse.OptionParser()
-    p.add_option('--url', default="https://www.news.google.com")
+    p.add_option('--url')
     p.add_option('--inline', action='store_true')
     p.add_option('--followups', action='store_true')
     random_connection_id = str(uuid.uuid4())
-    # random_query = "What is the biggest news today?"
-    # p.add_option('--query', default=random_query)
     p.add_option('--connectionid', default=random_connection_id)
-    # p.add_option('--use_local_news_db', action='store_true')
     options, arguments = p.parse_args()
 
     connection_id = options.connectionid
-    db = InMemoryDB()
-    chat_db = ChatHistoryService(connection_id, db)
-    chat_db.create_chat_history()
-    result_publisher = DebugPublisher()
+    in_mem_db = InMemoryDB()
 
-    while True:
-        print("\nHow can I help you?\n")
-        query = input()
+    def get_event(route_key, body):
+        event_body = body
         event = {
-            "body": json.dumps({"query": query, "url": options.url, "inline": options.inline, "followups": options.followups})
+            "requestContext": {
+                "routeKey": route_key,
+                "connectionId": connection_id,
+                'local': True,
+                'in_mem_db': in_mem_db
+            },
+            "body": json.dumps(event_body)
         }
+        return event
+    
+    event = get_event('$connect', {"url": options.url})
+    connect_resp = lambda_handler(event, None)
+    assert connect_resp['statusCode'] == 200
+
+    event = get_event('summarize', {
+        'url': options.url,
+        'inline': options.inline,
+        'followups': options.followups
+    })
+
+    result = lambda_handler(event, None)
+    assert result['statusCode'] == 200
+
+    # while True:
+    #     print("\nHow can I help you?\n")
+    #     query = input()
+    #     event = get_event('query', {
+    #         'query': query,
+    #         'url': options.url,
+    #         'inline': options.inline,
+    #         'followups': options.followups
+    #     })
         
-        result = handle_query(event, chat_db, result_publisher)
+    #     result = lambda_handler(event, None)
+    #     assert result['statusCode'] == 200

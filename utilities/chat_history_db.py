@@ -47,9 +47,20 @@ class ChatHistoryService:
     def create_chat_history(self):
         data = {
             "connectionid": self.connectionid,
-            "chat_history": []
+            "chat_history": [],
+            "cur_article_info": {}
         }
         self.db.put_item(Item=data)
+
+    def update_cur_article_info(self, article_info):
+        response = self.db.query(self.connectionid)
+        items = response.get('Items', None)
+        if items is None or len(items) == 0:
+            raise Exception("No chat history found")
+        
+        item = items[0]
+        item['cur_article_info'] = article_info
+        self.db.put_item(Item=item)
 
     def update_chat_history(self, question, answer):
         response = self.db.query(self.connectionid)
@@ -63,6 +74,13 @@ class ChatHistoryService:
             "answer": answer
         })
         self.db.put_item(Item=item)
+
+    def get_cur_article_info(self):
+        response = self.db.query(self.connectionid)
+        items = response.get('Items', None)
+        if items is None or len(items) == 0:
+            return None
+        return items[0].get('cur_article_info', {})
 
     def get_chat_history(self):
         response = self.db.query(self.connectionid)

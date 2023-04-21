@@ -5,6 +5,7 @@ import os, sys
 import tiktoken
 import json
 import pytz
+from newspaper import Article
 from datetime import datetime
 from dateutil import parser
 
@@ -137,3 +138,12 @@ def get_thread_for_fn(fn, args):
         args=[fn, args, resp_dict]
     )
     return (t, resp_dict)
+
+def get_article_info_from_url(url):
+    article = Article(url=url)
+    try:
+        article.download()
+        article.parse()
+    except:
+        article = None
+    return article
