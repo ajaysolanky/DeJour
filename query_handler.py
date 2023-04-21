@@ -78,7 +78,6 @@ class QueryHandler(object):
         # self.vector_db = VectorDBLocal(publisher)
         self.cq = ChatQuery(
             self.vector_db,
-            result_publisher,
             inline=inline,
             followups=followups,
             streaming=streaming,

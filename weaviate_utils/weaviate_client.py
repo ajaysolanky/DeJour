@@ -15,8 +15,7 @@ class WeaviateService(ABC):
     CLUSTER_URL = "https://a0fhpyrdtbkpzcd4w128hg.gcp.weaviate.cloud"
     BATCH_SIZE = 100
 
-    def __init__(self, publisher: PublisherEnum, weaviate_class: WeaviateClass) -> None:
-        self.publisher = publisher
+    def __init__(self, weaviate_class: WeaviateClass) -> None:
         self.class_name = weaviate_class.class_name
         self.class_obj = weaviate_class.get_class_obj()
         self.text_field_name = weaviate_class.text_field_name
@@ -59,7 +58,7 @@ class WeaviateService(ABC):
         return property_names
 
 class WeaviatePythonClient(WeaviateService):
-    def __init__(self, publisher: PublisherEnum, weaviate_class: WeaviateClass) -> None:
+    def __init__(self, weaviate_class: WeaviateClass) -> None:
         auth_config = weaviate.auth.AuthApiKey(api_key=self.API_KEY)
         self.client = weaviate.Client(
             url = self.CLUSTER_URL,
@@ -68,7 +67,7 @@ class WeaviatePythonClient(WeaviateService):
                 "X-OpenAI-Api-Key": os.getenv('OPENAI_API_KEY', 'not the token')
             }
         )
-        super().__init__(publisher, weaviate_class)
+        super().__init__(weaviate_class)
 
     def create_weaviate_class(self):
         self.client.schema.create_class(self.get_class_obj())

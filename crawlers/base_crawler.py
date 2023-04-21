@@ -1,5 +1,6 @@
 import time
 import logging
+import cleantext
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article
@@ -100,7 +101,8 @@ class BaseCrawler(ABC):
         metadatas = []
         orig_idces = []
         for i, r in new_news_df.iterrows():
-            splits = text_splitter.split_text(r.text)
+            cleaned_text = cleantext.clean(r.text, lower=False)
+            splits = text_splitter.split_text(cleaned_text)
             splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
             docs.extend(splits)
             for split_idx in range(len(splits)):

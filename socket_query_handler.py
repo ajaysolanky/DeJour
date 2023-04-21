@@ -13,7 +13,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_utils.streaming_socket_callback_handler import StreamingSocketOutCallbackHandler
 
 from publisher_enum import PublisherEnum
-from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet
+from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet, WeaviateClassBookSnippet
 
 dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
@@ -197,20 +197,28 @@ def get_publisher_for_url(url):
         return PublisherEnum.TECHCRUNCH
     elif "vice" in url:
         return PublisherEnum.VICE
+    elif PublisherEnum.BOOK_HEART_OF_DARKNESS_PDF.value in url:
+        return PublisherEnum.BOOK_HEART_OF_DARKNESS_PDF
+    elif PublisherEnum.BOOK_LOTR_PDF.value in url:
+        return PublisherEnum.BOOK_LOTR_PDF
     else:
         raise Exception("Invalid url")
     
 class QueryHandler(object):
-    def __init__(self, publisher: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
-        args = {"weaviate_class": WeaviateClassArticleSnippet(publisher.value)}
-        self.vector_db = VectorDBWeaviateCURL(publisher, args)
+    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
+        is_book = publisher_enum.name.startswith('BOOK_')
+        if is_book:
+            args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+        else:
+            args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
+        self.vector_db = VectorDBWeaviateCURL(args)
         # self.vector_db = VectorDBLocal(publisher)
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, result_publisher, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose)
+        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
 
     def get_chat_result(self, chat_history, query):
         return self.cq.answer_query_with_context(chat_history, query, None)
-    
+
 if __name__ == '__main__':
     p = optparse.OptionParser()
     p.add_option('--url', default="https://www.news.google.com")

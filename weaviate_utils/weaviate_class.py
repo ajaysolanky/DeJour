@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 class WeaviateClass(ABC):
-    def __init__(self, publisher) -> None:
-        self.class_name = self.get_full_class_name(publisher)
+    def __init__(self, publisher_str) -> None:
+        self.class_name = self.get_full_class_name(publisher_str)
 
     @abstractmethod
     def get_full_class_name(self, publisher):
@@ -17,8 +17,8 @@ class WeaviateClass(ABC):
         pass
 
 class WeaviateClassArticleSnippet(WeaviateClass):
-    def get_full_class_name(self, publisher):
-        return f"ArticleSnippet_{publisher}"
+    def get_full_class_name(self, publisher_str):
+        return f"ArticleSnippet_{publisher_str}"
 
     @property
     def text_field_name(self):
@@ -69,8 +69,8 @@ class WeaviateClassArticleSnippet(WeaviateClass):
         }
     
 class WeaviateClassBookSnippet(WeaviateClass):
-    def get_full_class_name(self, publisher):
-        return f"BookSnippet_{publisher}"
+    def get_full_class_name(self, publisher_str):
+        return f"BookSnippet_{publisher_str}"
 
     @property
     def text_field_name(self):

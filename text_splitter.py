@@ -14,7 +14,6 @@ class HardTokenSpacyTextSplitter(SpacyTextSplitter):
 
     def split_text(self, text: str) -> List[str]:
         """Split incoming text and return chunks."""
-        text = cleantext.clean(text, lower=False)
         splits = (str(s) for s in self._tokenizer(text).sents)
         final_splits = []
         for i, split in enumerate(splits):
