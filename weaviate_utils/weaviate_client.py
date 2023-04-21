@@ -8,16 +8,17 @@ import requests
 from abc import ABC, abstractmethod
 
 from publisher_enum import PublisherEnum
+from .weaviate_class import WeaviateClass
 
 class WeaviateService(ABC):
     API_KEY = os.getenv('WEAVIATE_KEY', 'not the token')
     CLUSTER_URL = "https://a0fhpyrdtbkpzcd4w128hg.gcp.weaviate.cloud"
     BATCH_SIZE = 100
-    TEXT_FIELD_NAME = "snippet"
 
-    def __init__(self, publisher: PublisherEnum) -> None:
-        self.publisher = publisher
-        self.class_name = f"ArticleSnippet_{self.publisher.value}"
+    def __init__(self, weaviate_class: WeaviateClass) -> None:
+        self.class_name = weaviate_class.class_name
+        self.class_obj = weaviate_class.get_class_obj()
+        self.text_field_name = weaviate_class.text_field_name
         if not self.class_exists():
             self.create_weaviate_class()
 
@@ -48,48 +49,7 @@ class WeaviateService(ABC):
         pass
 
     def get_class_obj(self):
-        return {
-            "class": self.class_name,
-            "description": "Snippet of text spliced from an article",
-            "vectorizer": "text2vec-openai",
-            "moduleConfig": {
-                "text2vec-openai": {
-                    "vectorizeClassName": True
-                }
-            },
-            "properties": [
-                {
-                    "name": "title",
-                    "description": "The title",
-                    "dataType": ["text"],
-                },
-                {
-                    "name": "source",
-                    "description": "URL of article",
-                    "dataType": ["text"],
-                },
-                {
-                    "name": "fetch_timestamp",
-                    "description": "Timestamp of when the article was fetched",
-                    "dataType": ["date"],
-                },
-                {
-                    "name": "publish_timestamp",
-                    "description": "Timestamp of when the article was published",
-                    "dataType": ["date"],
-                },
-                {
-                    "name": "top_image_url",
-                    "description": "URL of the top image from the article",
-                    "dataType": ["text"],
-                },
-                {
-                    "name": self.TEXT_FIELD_NAME,
-                    "description": "The actual snippet",
-                    "dataType": ["text"],
-                },
-            ]
-        }
+        return self.class_obj
 
     def get_property_names(self):
         property_names = []
@@ -98,7 +58,7 @@ class WeaviateService(ABC):
         return property_names
 
 class WeaviatePythonClient(WeaviateService):
-    def __init__(self, publisher: PublisherEnum) -> None:
+    def __init__(self, weaviate_class: WeaviateClass) -> None:
         auth_config = weaviate.auth.AuthApiKey(api_key=self.API_KEY)
         self.client = weaviate.Client(
             url = self.CLUSTER_URL,
@@ -107,7 +67,7 @@ class WeaviatePythonClient(WeaviateService):
                 "X-OpenAI-Api-Key": os.getenv('OPENAI_API_KEY', 'not the token')
             }
         )
-        super().__init__(publisher)
+        super().__init__(weaviate_class)
 
     def create_weaviate_class(self):
         self.client.schema.create_class(self.get_class_obj())
@@ -126,7 +86,7 @@ class WeaviatePythonClient(WeaviateService):
             batch.batch_size=self.BATCH_SIZE
             # Batch import all Questions
             for i, d in enumerate(data):
-                logging.info(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
+                logging.info(f"importing {self.text_field_name}: {i+1}")
                 properties = {name: d[name] for name in self.get_property_names()}
                 # id = get_valid_uuid(uuid.uuid4())
                 id = self.get_id(d['source'], d['idx'])
@@ -178,7 +138,7 @@ class WeaviateCURL(WeaviateService):
         ids = []
         batch_data = []
         for i, d in enumerate(data):
-            logging.info(f"importing {self.TEXT_FIELD_NAME}: {i+1}")
+            logging.info(f"importing {self.text_field_name}: {i+1}")
             properties = {name: d[name] for name in self.get_property_names()}
             # id = get_valid_uuid(uuid.uuid4())
             id = self.get_id(d['source'], d['idx'])

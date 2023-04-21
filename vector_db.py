@@ -19,8 +19,8 @@ from weaviate_utils.weaviate_client import WeaviatePythonClient, WeaviateCURL
 from utils import LOCAL_DB_FOLDER
 
 class VectorDB(ABC):
-    def __init__(self, publisher) -> None:
-        self.publisher = publisher
+    def __init__(self, args) -> None:
+        pass
 
     @abstractmethod
     def add_texts(self, texts: List[str], metadatas: List[Dict]):
@@ -35,10 +35,10 @@ class VectorDB(ABC):
         pass
 
 class VectorDBLocal(VectorDB):
-    def __init__(self, publisher):
-        super().__init__(publisher)
+    def __init__(self, args):
+        super().__init__(args)
         self.store = None
-        dir_path = f"{LOCAL_DB_FOLDER}/{self.publisher.value}/vector_db/"
+        dir_path = f"{LOCAL_DB_FOLDER}/{args['publisher_name']}/vector_db/"
         self.index_file_path = dir_path + 'docs.index'
         self.store_file_path = dir_path + 'faiss_store.pkl'
         if not os.path.isfile(self.index_file_path):
@@ -97,8 +97,8 @@ class VectorDBLocal(VectorDB):
             pickle.dump(store_copy, f)
 
 class VectorDBWeaviate(VectorDB, ABC):
-    def __init__(self, publisher) -> None:
-        super().__init__(publisher)
+    def __init__(self, args) -> None:
+        super().__init__(args)
         # self.weaviate_service = WeaviatePythonClient(self.publisher)
         # self.weaviate_service = WeaviateCURL(self.publisher)
     
@@ -107,7 +107,7 @@ class VectorDBWeaviate(VectorDB, ABC):
         pass
 
     def add_texts(self, texts: List[str], metadatas: List[Dict]):
-        data = [md | {self.weaviate_service.TEXT_FIELD_NAME: txt}  for txt, md in zip(texts, metadatas)]
+        data = [md | {self.weaviate_service.text_field_name: txt}  for txt, md in zip(texts, metadatas)]
         new_ids = self.weaviate_service.upload_data(data)
         return new_ids
     
@@ -115,7 +115,7 @@ class VectorDBWeaviate(VectorDB, ABC):
         results = self.weaviate_service.fetch_top_k_matches(query, k)
         docs = []
         for r in results:
-            page_content = r.pop(self.weaviate_service.TEXT_FIELD_NAME)
+            page_content = r.pop(self.weaviate_service.text_field_name)
             metadata = r
             docs.append(Document(
                 page_content=page_content,
@@ -124,23 +124,23 @@ class VectorDBWeaviate(VectorDB, ABC):
         return docs
     
 class VectorDBWeaviatePythonClient(VectorDBWeaviate):
-    def __init__(self, publisher) -> None:
-        super().__init__(publisher)
-        self.weaviate_service = WeaviatePythonClient(self.publisher)
+    def __init__(self, args) -> None:
+        super().__init__(args)
+        self.weaviate_service = WeaviatePythonClient(args['weaviate_class'])
 
     def get_vectorstore(self):
-        return Weaviate(self.weaviate_service.client, self.weaviate_service.class_name, self.weaviate_service.TEXT_FIELD_NAME)
+        return Weaviate(self.weaviate_service.client, self.weaviate_service.class_name, self.weaviate_service.text_field_name)
     
 class VectorDBWeaviateCURL(VectorDBWeaviate):
-    def __init__(self, publisher) -> None:
-        super().__init__(publisher)
-        self.weaviate_service = WeaviateCURL(self.publisher)
+    def __init__(self, args) -> None:
+        super().__init__(args)
+        self.weaviate_service = WeaviateCURL(args["weaviate_class"])
 
     def get_vectorstore(self):
         return WeaviateVectorStoreCURL(
             self,
             self.weaviate_service.class_name,
-            self.weaviate_service.TEXT_FIELD_NAME
+            self.weaviate_service.text_field_name
         )
 
 class WeaviateVectorStoreCURL(VectorStore):

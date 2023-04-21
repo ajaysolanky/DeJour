@@ -4,6 +4,7 @@ If you don't know the answer, just say "I'm not sure" verbatim. Don't try to mak
 Be concise, be clear, and use bullets where possible.
 ANSWER THE QUESTION DIRECTLY OR A TODDLER WILL DIE! AND BE AS CONCISE AS POSSIBLE!
 DO NOT WRITE ANYTHING THAT IS NOT USEFUL FOR DIRECTLY ANSWERING THE QUESTION!
+Answer in simple language that even a middle schooler could understand.
 The current date and time are {today_date}
 
 QUESTION: What was the size of the meta layoffs this week?

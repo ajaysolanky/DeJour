@@ -2,6 +2,7 @@ import sys
 import optparse
 import json
 import logging
+
 from crawlers.gn_crawler import GNCrawler
 from crawlers.source_crawler import SourceCrawler
 from crawlers.sources.atlanta_dunia_source import ADSource
@@ -14,11 +15,10 @@ from crawlers.sources.bbc_india_source import BBCIndiaSource
 from crawlers.nbacrawler import NBACrawler
 from crawlers.nytcrawler import NYTCrawler
 from publisher_enum import PublisherEnum
-from weaviate_utils.weaviate_client import WeaviatePythonClient
-
 from news_db import NewsDBLocal, NewsDBFirestoreDatabase
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 from publisher_enum import PublisherEnum
+from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -48,11 +48,13 @@ def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_
 
     publisher_enum = PublisherEnum(publisher_str)
     if use_local_vector_db:
+        args = {'publisher_name': publisher_enum.value}
         vector_db_class = VectorDBLocal
     else:
+        args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
         vector_db_class = VectorDBWeaviatePythonClient
 
-    vector_db = vector_db_class(publisher_enum)
+    vector_db = vector_db_class(args)
 
     if use_local_news_db:
         news_db_class = NewsDBLocal
