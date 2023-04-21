@@ -127,15 +127,19 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
     sources = response.get("sources")
+    followup_questions = response.get("followup_questions")
     if sources is None:
         logging.error("Missing sources")
         return {
             'statusCode': 200,
             'body': "Missing sources"
         }
+    if followup_questions is None:
+        followup_questions = []
     sources_message = {
         "type": "message",
-        "sources": sources
+        "sources": sources,
+        "questions": followup_questions
     }
     formatted_sources_message = json.dumps(sources_message)
     result_publisher.post_to_connection(formatted_sources_message)
