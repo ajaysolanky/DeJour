@@ -9,3 +9,4 @@ class PublisherEnum(Enum):
     SF_STANDARD = 'sf_standard'
     TECHCRUNCH = 'techcrunch'
     VICE = 'vice'
+    SEQUOIA = 'sequoia'

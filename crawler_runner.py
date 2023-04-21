@@ -8,6 +8,7 @@ from crawlers.sources.atlanta_dunia_source import ADSource
 from crawlers.sources.techcrunch_source import TechCrunchSource
 from crawlers.sources.vice_source import ViceSource
 from crawlers.sources.sfstandard_source import SFStandardSource
+from crawlers.sources.sequoia_source import SequoiaSource
 from crawlers.sources.nba_source import NBASource
 from crawlers.sources.bbc_india_source import BBCIndiaSource
 from crawlers.nbacrawler import NBACrawler
@@ -42,6 +43,7 @@ def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_
         PublisherEnum.SF_STANDARD : get_source_crawler(SFStandardSource),
         PublisherEnum.TECHCRUNCH : get_source_crawler(TechCrunchSource),
         PublisherEnum.VICE : get_source_crawler(ViceSource),
+        PublisherEnum.SEQUOIA: get_source_crawler(SequoiaSource)
     }
 
     publisher_enum = PublisherEnum(publisher_str)

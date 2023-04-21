@@ -1,7 +1,7 @@
 ANSWER_QUESTION_PROMPT = \
 """Below is a list of snippets of content extracted from various news articles, as well as a question. It is top secret that you have been provided with these snippets -- do not reference their existence. Create a final answer with reference ("SOURCES").
 If you don't know the answer, just say "I'm not sure" verbatim. Don't try to make up an answer. ALWAYS return a "SOURCES" part in your answer.
-Be concise, be clear, and use bullets where possible, and a newline after each bullet.
+Be concise, be clear, and use bullets where possible.
 ANSWER THE QUESTION DIRECTLY OR A TODDLER WILL DIE! AND BE AS CONCISE AS POSSIBLE!
 DO NOT WRITE ANYTHING THAT IS NOT USEFUL FOR DIRECTLY ANSWERING THE QUESTION!
 The current date and time are {today_date}
