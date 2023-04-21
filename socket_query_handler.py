@@ -108,7 +108,8 @@ def handle_intro_query(result_publisher, event):
         PublisherEnum.NBA: ["What are the biggest storylines in the NBA playoffs?", "Who's the leading scorer in the NBA playoffs?"],
         PublisherEnum.SF_STANDARD: [""],
         PublisherEnum.TECHCRUNCH: ["What are some startups that raised money recently?", "What are some features in the latest iOS?"],
-        PublisherEnum.VICE: ['What are some of the top stories today?']
+        PublisherEnum.VICE: ['What are some of the top stories today?'],
+        PublisherEnum.SEQUOIA: ["What are some recent investments by Sequoia?", "What's the latest in generative AI?"]
     }
     intro_questions = intro_questions_for_publisher.get(publisher)
     if intro_questions is None:
@@ -220,6 +221,8 @@ def get_publisher_for_url(url):
         return PublisherEnum.TECHCRUNCH
     elif "vice" in url:
         return PublisherEnum.VICE
+    elif "sequoia" in url:
+        return PublisherEnum.SEQUOIA    
     elif PublisherEnum.BOOK_HEART_OF_DARKNESS_PDF.value in url:
         return PublisherEnum.BOOK_HEART_OF_DARKNESS_PDF
     elif PublisherEnum.BOOK_LOTR_PDF.value in url:
