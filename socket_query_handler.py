@@ -40,8 +40,6 @@ def lambda_handler(event, context):
         try:
             chat_db.create_chat_history()
             url = body.get("url")
-            article = get_article_info_from_url(url)
-            chat_db.update_cur_article_info({'title': article.title})
             response['statusCode'] = 200
         except Exception as e:
             logging.error(f"Failed to create chat history with error {e}")
@@ -142,7 +140,7 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
     logging.info("Got chat history: " + str(chat_history))
-    cur_article_info = chat_db.get_cur_article_info()
+    cur_article_info = get_article_info_from_url(url)
     response = _make_query(query, url, chat_history, inline, result_publisher, followups, cur_article_info)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
@@ -243,7 +241,7 @@ class QueryHandler(object):
         self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
-        return self.cq.answer_query_with_context(chat_history, query, cur_article_info.get('title'))
+        return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
 
 if __name__ == '__main__':
     p = optparse.OptionParser()
