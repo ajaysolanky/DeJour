@@ -90,7 +90,9 @@ def unstructured_time_string_to_structured(unstructured_time_string):
 
 def get_isoformat_and_add_tz_if_not_there(dt):
     if dt is not None:
-        if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        if isinstance(dt, str) == True:
+            return None
+        elif dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
             eastern = pytz.timezone('America/New_York')
             dt = eastern.localize(dt)
 

@@ -1,0 +1,19 @@
+{
+    "schema_version": "v1",
+    "name_for_human": "DeJour TechCrunch",
+    "name_for_model": "dejour_plugin",
+    "description_for_human": "Plugin for asking questions and interacting with the news.",
+    "description_for_model": "Plugin for asking questions and interacting with the news.",
+    "auth": {
+      "type": "none"
+    },
+    "api": {
+      "type": "openapi",
+      "url": "http://localhost:8080/.well-known/openai.yaml",
+      "is_user_authenticated": false
+    },
+    "logo_url": "http://localhost:8080/logo.png",
+    "contact_email": "teamvangoapp@gmail.com",
+    "legal_info_url": "http://example.com/legal-info"
+  }
+  

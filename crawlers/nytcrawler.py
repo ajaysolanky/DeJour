@@ -51,6 +51,7 @@ class NYTCrawler(BaseCrawler):
     def __init__(self, vector_db, news_db):
         super().__init__(vector_db, news_db)
         self.api_key = os.getenv('NYT_API_KEY', 'not the token')
+        self.article_bodies = {}
 
     def get_article_results(self):
         cur_dt = pytz.utc.localize(datetime.datetime.utcnow()).astimezone(pytz.timezone('America/New_York'))
@@ -78,6 +79,27 @@ class NYTCrawler(BaseCrawler):
                 return results
         return results
 
+    def augment_data(self, url):
+            print (f"fetching article @ url: {url}")
+            article = Article(url=url)
+            try:
+                article.download()
+                article.parse()
+            except:
+                article = None
+            if article is None:
+                article = object()
+            date = getattr(article, "publish_date", None)
+            print(f"Publish date: {date}")
+            return pd.Series({
+                "text": getattr(article, "text", None),
+                "preview": None,
+                "top_image_url": getattr(article, "top_image", None),
+                "authors": ','.join(getattr(article, "authors", [])),
+                "publish_timestamp": get_isoformat_and_add_tz_if_not_there(date),
+                "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
+            })
+    
     def fetch_news_df(self):
         articles = self.get_article_results() 
 
@@ -108,7 +130,7 @@ class NYTCrawler(BaseCrawler):
                 logging.info(f"Failed to extract full article, falling back to abstract. Error: {e}")
                 text = backup_text
             return {
-                "text": text,
+                # "text": text,
                 "url": url,
                 "title": title,
                 "published_date": published_date_iso
