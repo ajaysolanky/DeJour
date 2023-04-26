@@ -53,7 +53,7 @@ def serve_logo():
 def handle_chatgpt_query():
     query = request.args['query']
     question_topic = request.args['topic']
-    default_publisher = PublisherEnum.NBA
+    default_publisher = PublisherEnum.GOOGLE_NEWS
     publisher = default_publisher
     if question_topic == "tech":
         publisher = PublisherEnum.TECHCRUNCH
@@ -74,7 +74,7 @@ def handle_chatgpt_query():
         return {
             "answer": chat_result["answer"],
             "sources": mapped_sources,
-            "followup_queries": followup_prompts
+            # "followup_queries": followup_prompts
         }
     except Exception as e:
         logging.error(f"Chat result failed with error: {e}")
