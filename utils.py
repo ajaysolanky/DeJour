@@ -147,5 +147,5 @@ def get_article_info_from_url(url):
         article.download()
         article.parse()
     except:
-        article = None
+        pass
     return article

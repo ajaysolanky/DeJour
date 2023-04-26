@@ -1,7 +1,6 @@
 import logging
 logger = logging.getLogger()
 import numpy as np
-import cleantext
 from typing import Any, Dict, List, Optional, Iterable
 from langchain.text_splitter import TextSplitter, SpacyTextSplitter
 

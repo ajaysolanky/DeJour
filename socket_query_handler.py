@@ -57,10 +57,10 @@ def lambda_handler(event, context):
         response = handle_intro_query(result_publisher, event)
     elif route_key == 'query':
         logging.info("Route query")
-        response = handle_query(body, chat_db, result_publisher)
+        response = handle_query_or_summarize("query", body, chat_db, result_publisher)
     elif route_key == 'summarize':
         logging.info('Route summarize')
-        response = handle_summarize(body, chat_db, result_publisher)
+        response = handle_query_or_summarize("summarize", body, chat_db, result_publisher)
         # try:
         #     response = handle_query(event, chat_db, result_publisher)
         # except Exception as e:
@@ -71,28 +71,22 @@ def lambda_handler(event, context):
         #     }
     return response
 
-def handle_summarize(body, chat_db: ChatHistoryService, result_publisher):
-    logging.info("Received summarize body: " + json.dumps(body))
-    query = "Summarize this article"
-    url = body.get("url", "")
-    inline = body.get("inline", False)
-    followups = body.get("followups", False)
-    logging.info(f"Received summarization request for url: {url}")
-
-    return _handle_query(query, url, inline, chat_db, result_publisher, followups)
-
-def handle_query(body, chat_db, result_publisher):
-    # Handle the query event
-    # Here, you can retrieve the query parameter from the request and process it
-    # For example, you can print the value of the 'query' parameter
-    logging.info("Received query body: " + json.dumps(body))
-    query = body.get("query", "")
-    url = body.get("url", "")
-    inline = body.get("inline", False)
-    followups = body.get("followups", False)
-    logging.info("Received query: " + query)
+def handle_query_or_summarize(req_type, body, chat_db: ChatHistoryService, result_publisher):
+    logging.info(f"Received {req_type} body: " + json.dumps(body))
+    if req_type == 'summarize':
+        query = "Summarize this article"
+    elif req_type == 'query':
+        query = body['query']
+    else:
+        raise Exception('req type should be "summarize" or "query"')
     
-    return _handle_query(query, url, inline, chat_db, result_publisher, followups)
+    use_local_vector_db = body.get("use_local_vector_db", False)
+    url = body.get("url", "")
+    inline = body.get("inline", False)
+    followups = body.get("followups", False)
+    use_summaries = body.get("use_summaries", True)
+
+    return _handle_query(query, url, inline, chat_db, result_publisher, followups, use_summaries, use_local_vector_db)
 
 def handle_intro_query(result_publisher, event):
     body = json.loads(event.get("body", ""))
@@ -136,12 +130,12 @@ def handle_intro_query(result_publisher, event):
         'statusCode': 200,
     }
 
-def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher, followups):
+def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher, followups, use_summaries, use_local_vector_db):
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
     logging.info("Got chat history: " + str(chat_history))
     cur_article_info = get_article_info_from_url(url)
-    response = _make_query(query, url, chat_history, inline, result_publisher, followups, cur_article_info)
+    response = _make_query(query, url, chat_history, inline, result_publisher, followups, use_summaries, use_local_vector_db, cur_article_info)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
     sources = response.get("sources")
@@ -176,12 +170,12 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
         'body': 'Query processed.'
     }
 
-def _make_query(query, url, chat_history, inline, result_publisher, followups, cur_article_info):
+def _make_query(query, url, chat_history, inline, result_publisher, followups, use_summaries, use_local_vector_db, cur_article_info):
     chat_history_tups = [(e['question'], e['answer']) for e in chat_history]
     chat_history_tups = chat_history_tups[-1*HISTORY_LOOKBACK_LEN:]
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline, followups=followups, verbose=True)
+        qh = QueryHandler(publisher, result_publisher, inline, followups=followups, use_summaries=use_summaries, use_local_vector_db=use_local_vector_db, verbose=True)
         try:
             chat_result = qh.get_chat_result(chat_history_tups, query, cur_article_info)
             if "followup_questions" in chat_result:
@@ -229,16 +223,19 @@ def get_publisher_for_url(url):
         raise Exception("Invalid url")
     
 class QueryHandler(object):
-    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
+    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, use_summaries: bool, verbose: bool, use_local_vector_db: bool = False):
         is_book = publisher_enum.name.startswith('BOOK_')
-        if is_book:
-            args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+        if use_local_vector_db:
+            self.vector_db = VectorDBLocal({'publisher_name': publisher_enum.value})
         else:
-            args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
-        self.vector_db = VectorDBWeaviateCURL(args)
-        # self.vector_db = VectorDBLocal(publisher)
+            if is_book:
+                args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+            else:
+                args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
+            self.vector_db = VectorDBWeaviateCURL(args)
+
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
+        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, use_summaries=use_summaries, verbose=verbose, book=is_book)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
@@ -249,6 +246,8 @@ if __name__ == '__main__':
     p.add_option('--inline', action='store_true')
     p.add_option('--summarize', action='store_true')
     p.add_option('--followups', action='store_true')
+    p.add_option('--use_summaries', action='store_true')
+    p.add_option('--use_local_vector_db', action='store_true')
     random_connection_id = str(uuid.uuid4())
     p.add_option('--connectionid', default=random_connection_id)
     options, arguments = p.parse_args()
@@ -290,7 +289,9 @@ if __name__ == '__main__':
                 'query': query,
                 'url': options.url,
                 'inline': options.inline,
-                'followups': options.followups
+                'followups': options.followups,
+                'use_summaries': options.use_summaries,
+                'use_local_vector_db': options.use_local_vector_db
             })
             
             result = lambda_handler(event, None)

@@ -3,8 +3,8 @@ import pandas as pd
 from .base_crawler import BaseCrawler
 
 class SourceCrawler(BaseCrawler):
-    def __init__(self, source, vector_db, news_db):
-        super().__init__(vector_db, news_db)
+    def __init__(self, source, vector_db, news_db, add_summaries):
+        super().__init__(vector_db, news_db, add_summaries)
         self.source = source
 
     def fetch_news_df(self):

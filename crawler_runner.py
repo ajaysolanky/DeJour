@@ -33,7 +33,7 @@ def lambda_handler(event, context):
         "status": "ok"
     }
 
-def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_db: bool):
+def build_crawler(publisher_str: str, add_summaries: bool, use_local_vector_db: bool, use_local_news_db: bool):
     crawler_dict = {
         PublisherEnum.ATLANTA_DUNIA : get_source_crawler(ADSource),
         PublisherEnum.BBC_INDIA : get_source_crawler(BBCIndiaSource),
@@ -63,14 +63,15 @@ def build_crawler(publisher_str: str, use_local_vector_db: bool, use_local_news_
 
     news_db = news_db_class(publisher_enum)
 
-    return crawler_dict[publisher_enum](vector_db, news_db)
+    return crawler_dict[publisher_enum](vector_db, news_db, add_summaries)
 
 def get_source_crawler(source):
-    return lambda ndb, vdb: SourceCrawler(source, ndb, vdb)
+    return lambda ndb, vdb, add_summaries: SourceCrawler(source, ndb, vdb, add_summaries)
 
 if __name__ == '__main__':
     p = optparse.OptionParser()
     p.add_option('--publisher')
+    p.add_option('--add_summaries', action='store_true')
     p.add_option('--use_local_vector_db', action='store_true')
     p.add_option('--use_local_news_db', action='store_true')
     options, arguments = p.parse_args()
@@ -79,5 +80,5 @@ if __name__ == '__main__':
     if not publisher_str:
         raise Exception('must specify a publisher')
 
-    crawler = build_crawler(publisher_str, options.use_local_vector_db, options.use_local_news_db)
+    crawler = build_crawler(publisher_str, options.add_summaries, options.use_local_vector_db, options.use_local_news_db)
     crawler.run_crawler()

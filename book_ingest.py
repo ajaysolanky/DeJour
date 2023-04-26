@@ -1,6 +1,5 @@
 import time
 import logging
-import cleantext
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article

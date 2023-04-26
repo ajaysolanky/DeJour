@@ -6,8 +6,8 @@ from .base_crawler import BaseCrawler
 
 class GNCrawler(BaseCrawler):
     crawler_prefix = "google_news_"
-    def __init__(self, vector_db, news_db):
-        super().__init__(vector_db, news_db)
+    def __init__(self, vector_db, news_db, add_summaries):
+        super().__init__(vector_db, news_db, add_summaries)
         self.gn_client = GNews()
 
     def fetch_news_df(self):
