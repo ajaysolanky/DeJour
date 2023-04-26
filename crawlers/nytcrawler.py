@@ -5,6 +5,7 @@ import requests
 # from ghost import Ghost
 import newspaper
 import pandas as pd
+import time
 import datetime
 import os
 import json
@@ -56,27 +57,32 @@ class NYTCrawler(BaseCrawler):
     def get_article_results(self):
         cur_dt = pytz.utc.localize(datetime.datetime.utcnow()).astimezone(pytz.timezone('America/New_York'))
         cur_date_str = cur_dt.strftime('%Y%m%d')
+        logging.info("Current time: " + cur_date_str)
         yday_date_str = (cur_dt - datetime.timedelta(days=1)).strftime('%Y%m%d')
+        tmr_date_str = (cur_dt + datetime.timedelta(days=1)).strftime('%Y%m%d')
 
         results = []
-        for i in range(100):
-            params = {"begin_date": yday_date_str, "end_date": cur_date_str, "api-key": self.api_key, "page": i}
+        for i in range(12):
+            time.sleep(12)
+            params = {"begin_date": yday_date_str, "end_date": tmr_date_str, "api-key": self.api_key, "page": i}
             base_url = "https://api.nytimes.com/svc/search/v2/articlesearch.json"
             response = requests.get(base_url, params=params)
             json_response = response.json()
             if 'status' not in json_response:
                 logging.info("No status in response.")
-                return results
+                continue
             status = json_response['status']                
             if status != 'OK':
                 logging.info(f"Invalid status. Status is {status} ")
-                return results
+                continue
             articles = json_response['response']['docs']
             results.extend(articles)
             logging.info(f"processed page: {i}")
             hits_count = json_response['response']['meta']['hits']
             if hits_count < 10:
+                import pdb; pdb.set_trace()
                 return results
+        import pdb; pdb.set_trace()
         return results
 
     def augment_data(self, url):
@@ -92,12 +98,12 @@ class NYTCrawler(BaseCrawler):
             date = getattr(article, "publish_date", None)
             print(f"Publish date: {date}")
             return pd.Series({
-                "text": getattr(article, "text", None),
+                # "text": getattr(article, "text", None),
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
                 "publish_timestamp": get_isoformat_and_add_tz_if_not_there(date),
-                "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
+                "fetch_timestamp": pytz.utc.localize(datetime.datetime.utcnow()).isoformat()
             })
     
     def fetch_news_df(self):
@@ -130,7 +136,7 @@ class NYTCrawler(BaseCrawler):
                 logging.info(f"Failed to extract full article, falling back to abstract. Error: {e}")
                 text = backup_text
             return {
-                # "text": text,
+                "text": text,
                 "url": url,
                 "title": title,
                 "published_date": published_date_iso
