@@ -7,9 +7,13 @@ from newspaper import Article
 from datetime import datetime
 import pytz
 from abc import ABC, abstractmethod
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMChain
+from langchain.prompts.prompt import PromptTemplate
 
+from prompts.all_prompts import ARTICLE_SUMMARIZATION_PROMPT
 from text_splitter import HardTokenSpacyTextSplitter
-from utils import HiddenPrints, TokenCountCalculator, unstructured_time_string_to_structured, get_isoformat_and_add_tz_if_not_there
+from utils import TokenCountCalculator, get_isoformat_and_add_tz_if_not_there
 
 class BaseCrawler(ABC):
     CHUNK_SIZE_TOKENS = 300
@@ -18,12 +22,15 @@ class BaseCrawler(ABC):
     MIN_SPLIT_WORDS = 5
     CRAWLER_SLEEP_SECONDS = 900
     UPLOAD_BATCH_SIZE = 10
+    SUMMARY_MODEL = 'gpt-3.5-turbo'
+    SUMMARY_PROMPT = ARTICLE_SUMMARIZATION_PROMPT
 
-    def __init__(self, vector_db, news_db):
+    def __init__(self, vector_db, news_db, add_summaries):
         self.vector_db = vector_db
         self.news_db = news_db
         self.failed_dl_cache = set()
         self.get_num_tokens = TokenCountCalculator().get_num_tokens
+        self.add_summaries = add_summaries
 
     @abstractmethod
     def fetch_news_df(self):
@@ -97,27 +104,36 @@ class BaseCrawler(ABC):
             chunk_overlap=self.CHUNK_OVERLAP_TOKENS,
             separator=self.SEPARATOR
             )
-        docs = []
+        texts = []
         metadatas = []
         orig_idces = []
         for i, r in new_news_df.iterrows():
-            cleaned_text = cleantext.clean(r.text, lower=False)
-            splits = text_splitter.split_text(cleaned_text)
-            splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
-            docs.extend(splits)
-            for split_idx in range(len(splits)):
-                metadatas.append({
+            cleaned_text = cleantext.clean(r.text, clean_all=False)
+            base_metadata = {
                     "title": r.title,
                     "source": r.url,
                     "publish_timestamp": r.publish_timestamp,
                     "fetch_timestamp": r.fetch_timestamp,
                     "top_image_url": r.top_image_url,
-                    "idx": split_idx
-                })
+                }
+            if self.add_summaries:
+                try:
+                    summary_text = self.get_summary(cleaned_text, r.title)
+                    summary_metadata = base_metadata | {"idx": -1, "is_summary": True}
+                    texts.append(summary_text)
+                    metadatas.append(summary_metadata)
+                except Exception as e:
+                    logging.info(f"Exception while generating summary: {e}")
+            splits = text_splitter.split_text(cleaned_text)
+            splits = [s for s in splits if len(s.split(' ')) > self.MIN_SPLIT_WORDS]
+            texts.extend(splits)
+            for split_idx in range(len(splits)):
+                #TODO: should build some common interface with the weaviate class
+                metadatas.append(base_metadata | {"idx": split_idx, "is_summary": False})
             orig_idces.extend([i] * len(splits))
         
         logging.info("adding texts to VectorDB")
-        new_ids = self.vector_db.add_texts(docs, metadatas)
+        new_ids = self.vector_db.add_texts(texts, metadatas)
         logging.info("finished adding texts to VectorDB")
 
         idc_id_map = defaultdict(list)
@@ -135,6 +151,24 @@ class BaseCrawler(ABC):
         logging.info("adding news to news db")
         self.news_db.add_news_df(copy_df)
         logging.info("finished adding news to news db")
+
+    def get_summary(self, article_text, article_title):
+        #TODO: recursive summarization
+        # don't overload the context window
+        while self.get_num_tokens(article_text) > 3700:
+            text_len = len(article_text)
+            ten_pct_len = int(text_len * .1)
+            article_text = article_text[:-ten_pct_len]
+        summary_llm = ChatOpenAI(temperature=0, model_name=self.SUMMARY_MODEL)
+        summary_prompt = PromptTemplate.from_template(self.SUMMARY_PROMPT)
+        summarize_chain = LLMChain(
+            llm=summary_llm,
+            prompt=summary_prompt,
+            )
+        return summarize_chain.run(
+            article_title=article_title,
+            article_text=article_text
+        )
 
     def run_crawler(self):
         while True:

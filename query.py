@@ -3,7 +3,7 @@ import json
 import threading
 from langchain import OpenAI
 from langchain.chains import LLMChain, ChatVectorDBChain
-from langchain.chains.chat_vector_db.prompts import PromptTemplate
+from langchain.prompts.prompt import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks.base import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -32,15 +32,16 @@ class ChatQuery(Query):
     CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
     CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
 
-    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None, verbose=True, book=False) -> None:
+    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None, use_summaries=True, verbose=True, book=False) -> None:
         self.inline = inline
         self.followups = followups
         self.vector_db = vector_db
+        self.use_summaries = use_summaries
         self.book = book
         self.condense_question_prompt = PromptTemplate.from_template(CONDENSE_QUESTION_PROMPT)
         answer_question_prompt = ANSWER_QUESTION_PROMPT_INLINE if self.inline else ANSWER_QUESTION_PROMPT
         self.answer_question_prompt = PromptTemplate.from_template(answer_question_prompt)
-        self.document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
+        document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
         condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
         callback_manager = CallbackManager([streaming_callback]) if streaming else None
         answer_llm = ChatOpenAI(
@@ -54,7 +55,7 @@ class ChatQuery(Query):
         doc_chain = DejourStuffDocumentsChain(
             llm_chain=LLMChain(llm=answer_llm, prompt=self.answer_question_prompt, verbose=verbose),
             document_variable_name="summaries",
-            document_prompt=self.document_prompt,
+            document_prompt=document_prompt,
             verbose=verbose
         )
         #TODO: these chains were very much hacked together and need cleaning up
@@ -75,10 +76,17 @@ class ChatQuery(Query):
         )
 
     def run_chain(self, chat_history, query, current_article_title):
+        if self.use_summaries:
+            filters = {}
+        else:
+            filters = {"is_summary": ["Equal", False]}
         fetch_q_and_docs_resp = self.fetch_q_and_docs_chain({
             "question": query,
             "chat_history": chat_history,
-            "article_title": current_article_title
+            "article_title": current_article_title,
+            "vectordbkwargs": {
+                "filters": filters
+            }
         })
         new_question = fetch_q_and_docs_resp['question']
         print(f"\n\nNEW QUESTION: {new_question}\n\n")

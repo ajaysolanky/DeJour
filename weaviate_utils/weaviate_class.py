@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 class WeaviateClass(ABC):
-    def __init__(self, publisher_str) -> None:
+    def __init__(self, publisher_str: str) -> None:
         self.class_name = self.get_full_class_name(publisher_str)
 
     @abstractmethod
@@ -59,6 +59,11 @@ class WeaviateClassArticleSnippet(WeaviateClass):
                     "name": "top_image_url",
                     "description": "URL of the top image from the article",
                     "dataType": ["text"],
+                },
+                {
+                    "name": "is_summary",
+                    "description": "Whether this is a processed summary of the article",
+                    "dataType": ["boolean"]
                 },
                 {
                     "name": self.text_field_name,

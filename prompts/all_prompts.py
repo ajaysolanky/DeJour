@@ -288,6 +288,9 @@ Please come up with a list of questions, in the specified JSON format, for the f
 CURRENT_ARTICLE_FETCH_DOCUMENT_PROMPT = \
 """The user is currently reading a news article titled: {article_title}. This is the user's question: {user_question}"""
 
+ARTICLE_SUMMARIZATION_PROMPT = \
+"Summarize the following news article titled {article_title} :\n\n{article_text}"
+
 # extra for answer question prompt
 # """QUESTION: Why is Biden in Belfast?
 # =========

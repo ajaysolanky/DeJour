@@ -11,7 +11,10 @@ class DejourStuffDocumentsChain(StuffDocumentsChain):
         # Get relevant information from each document.
         doc_dicts = []
         for i, doc in enumerate(docs):
-            base_info = {"article_snippet": doc.page_content}
+            snippet = doc.page_content
+            if doc.metadata.get('is_summary'):
+                snippet = f"<<THE FOLLOWING IS A SUMMARY OF THE ARTICLE>>\n{snippet}"
+            base_info = {"article_snippet": snippet}
             base_info.update(doc.metadata)
             base_info['source'] = f"[{i+1}]"
             document_info = {

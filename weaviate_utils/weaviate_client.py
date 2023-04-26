@@ -41,7 +41,7 @@ class WeaviateService(ABC):
         pass
     
     @abstractmethod
-    def fetch_top_k_matches(self, query_text, k):
+    def fetch_top_k_matches(self, query_text, k, filters: dict[str, list[str, str]]):
         pass
 
     @abstractmethod
@@ -97,16 +97,32 @@ class WeaviatePythonClient(WeaviateService):
                     uuid=id)
         return ids
 
-    def fetch_top_k_matches(self, query_text, k):
+    #TODO: I've never tested this
+    def fetch_top_k_matches(self, query_text, k, filters: dict[str, list[str, str]]):
         query_dict = {"concepts": [query_text]}
-
-        result = (
+        
+        query = (
             self.client.query
                 .get(self.class_name, self.get_property_names())
                 .with_near_text(query_dict)
                 .with_limit(k)
-                .do()
             )
+        
+        if filters:
+            filter_li = list(filters.items())
+            field, (operator, val) = filter_li[0]
+            assert len(filter_li) == 1, "Currently only support one filter"
+            assert type(val) == bool, "Currently only support bool filter"
+
+            where_filter = {
+                "path": [field],
+                "operator": operator,
+                "valueBoolean": val
+            }
+
+            query = query.with_where(where_filter)
+        
+        result = query.do()
 
         return result['data']['Get'][self.class_name]
 
@@ -166,15 +182,29 @@ class WeaviateCURL(WeaviateService):
         if r.status_code != 200:
             raise Exception('Failed!')
 
-    def fetch_top_k_matches(self, query_text, k):
+    def fetch_top_k_matches(self, query_text, k, filters: dict[str, list[str, str]]):
         formatted_fields = '\n'.join(self.get_property_names())
+        if filters:
+            filter_li = list(filters.items())
+            field, (operator, val) = filter_li[0]
+            assert len(filter_li) == 1, "Currently only support one filter"
+            assert type(val) == bool, "Currently only support bool filter"
+
+            where_filter_str = "where: { path: [\"%(field)s\"], operator: %(operator)s, valueBoolean: %(val)s}" \
+                % {
+                    "field": field,
+                    "operator": operator,
+                    "val": "true" if val else "false"
+                }
+        else:
+            where_filter_str = ""
         graphql = """
         {
             Get{
                 %(class_name)s(
                     nearText: {
                         concepts: ["%(query_text)s"]
-                    },
+                    },%(where_filter)s
                     limit: %(k)s
                 ){
                     %(formatted_fields)s
@@ -188,7 +218,8 @@ class WeaviateCURL(WeaviateService):
             "class_name": self.class_name,
             "query_text": query_text,
             "k": k,
-            "formatted_fields": formatted_fields
+            "formatted_fields": formatted_fields,
+            "where_filter": where_filter_str
         }
         data = {
             "query": graphql

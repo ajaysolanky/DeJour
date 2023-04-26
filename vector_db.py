@@ -27,12 +27,54 @@ class VectorDB(ABC):
         pass
 
     @abstractmethod
-    def get_k_closest_docs(self, query: str, k: int):
+    def get_k_closest_docs(self, query: str, k: int, filters: dict[str, list[str]] = {}):
         pass
     
     @abstractmethod
     def get_vectorstore(self):
         pass
+
+class CustomFAISS(FAISS):
+    def similarity_search(
+        self, query: str, k: int = 4, **kwargs: Any
+    ) -> List[Document]:
+        """Return docs most similar to query.
+
+        Args:
+            query: Text to look up documents similar to.
+            k: Number of Documents to return. Defaults to 4.
+
+        Returns:
+            List of Documents most similar to the query.
+        """
+        filters = kwargs.get('filters', {})
+        if filters:
+            k_expanded = k * 5 # faiss doesn't let you apply a filter, so as a hack I'm expanding the search 5x and then filtering after
+        else:
+            k_expanded = k
+
+        docs_and_scores = self.similarity_search_with_score(query, k_expanded)
+        #TODO: test this code
+        doc_ids_to_be_filtered = set()
+        for i, (d, _) in enumerate(docs_and_scores):
+            for field, (operator, val) in filters.items():
+                doc_val = d.metadata.get(field)
+                # https://weaviate.io/developers/weaviate/api/graphql/filters#filter-structure
+                if operator == 'GreaterThan':
+                    comp = lambda x, y: x > y
+                elif operator == 'LessThan':
+                    comp = lambda x, y: x < y
+                elif operator == 'Equal':
+                    comp = lambda x, y: x == y
+                elif operator == 'NotEqual':
+                    comp = lambda x, y: x != y
+                else:
+                    raise NotImplementedError()
+                if not comp(doc_val, val):
+                    doc_ids_to_be_filtered.add(i)
+        filter_out_indices = lambda lst, indices: [item for i, item in enumerate(lst) if i not in indices]
+        final_docs = [d for d, _ in filter_out_indices(docs_and_scores, doc_ids_to_be_filtered)]
+        return final_docs[:k]
 
 class VectorDBLocal(VectorDB):
     def __init__(self, args):
@@ -47,7 +89,7 @@ class VectorDBLocal(VectorDB):
                 f.write('')
             with open(self.store_file_path, 'w') as f:
                 f.write('')
-            init_store = FAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
+            init_store = CustomFAISS.from_texts(['test'], OpenAIEmbeddings(), metadatas=[{"source":'test'}])
             self.save_db(init_store)
         self.load_db()
 
@@ -68,10 +110,13 @@ class VectorDBLocal(VectorDB):
             )
         self.save_db()
         return new_ids
-    
-    def get_k_closest_docs(self, query: str, k: int):
+
+    #TODO: deprecate this code, it's not used
+    def get_k_closest_docs(self, query: str, k: int, filters: dict[str, list[str]] = {}):
         embedding = self.get_embedding(query)
-        _, indices = self.store.index.search(np.array([embedding], dtype=np.float32), k)
+        # faiss doesn't let you apply a filter, so as a hack I'm expanding the search 5x and then filtering after
+        full_k = k * 5
+        _, indices = self.store.index.search(np.array([embedding], dtype=np.float32), full_k)
         docs = []
         for i in indices[0]:
             if i == -1:
@@ -82,7 +127,27 @@ class VectorDBLocal(VectorDB):
             if not isinstance(doc, Document):
                 raise ValueError(f"Could not find document for id {_id}, got {doc}")
             docs.append(doc)
-        return docs
+        
+        #TODO: test this code
+        docs_to_be_filtered = set()
+        for d in docs:
+            for field, (operator, val) in filters.items():
+                doc_val = d.metadata[field]
+                # https://weaviate.io/developers/weaviate/api/graphql/filters#filter-structure
+                if operator == 'GreaterThan':
+                    comp = lambda x, y: x > y
+                elif operator == 'LessThan':
+                    comp = lambda x, y: x < y
+                elif operator == 'Equal':
+                    comp = lambda x, y: x == y
+                elif operator == 'NotEqual':
+                    comp = lambda x, y: x != y
+                else:
+                    raise NotImplementedError()
+                if not comp(field, val):
+                    docs_to_be_filtered.add(d)
+        final_docs = [d for d in docs if d not in docs_to_be_filtered]
+        return final_docs
 
     def get_embedding(self, text):
         return self.store.embedding_function(text)
@@ -99,8 +164,6 @@ class VectorDBLocal(VectorDB):
 class VectorDBWeaviate(VectorDB, ABC):
     def __init__(self, args) -> None:
         super().__init__(args)
-        # self.weaviate_service = WeaviatePythonClient(self.publisher)
-        # self.weaviate_service = WeaviateCURL(self.publisher)
     
     @abstractmethod
     def get_vectorstore(self):
@@ -111,8 +174,8 @@ class VectorDBWeaviate(VectorDB, ABC):
         new_ids = self.weaviate_service.upload_data(data)
         return new_ids
     
-    def get_k_closest_docs(self, query: str, k: int):
-        results = self.weaviate_service.fetch_top_k_matches(query, k)
+    def get_k_closest_docs(self, query: str, k: int, filters: dict[str, list[str]] = {}):
+        results = self.weaviate_service.fetch_top_k_matches(query, k, filters)
         docs = []
         for r in results:
             page_content = r.pop(self.weaviate_service.text_field_name)
@@ -192,7 +255,8 @@ class WeaviateVectorStoreCURL(VectorStore):
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Document]:
-        return self._curl_client.get_k_closest_docs(query, k)
+        filters = kwargs.get('filters')
+        return self._curl_client.get_k_closest_docs(query, k, filters)
 
     @classmethod
     def from_texts(

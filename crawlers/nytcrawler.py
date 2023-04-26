@@ -48,8 +48,8 @@ class NYTAPIResponse(TypedDict):
     docs: NYTArticleQueryResponse
     
 class NYTCrawler(BaseCrawler):
-    def __init__(self, vector_db, news_db):
-        super().__init__(vector_db, news_db)
+    def __init__(self, vector_db, news_db, add_summaries):
+        super().__init__(vector_db, news_db, add_summaries)
         self.api_key = os.getenv('NYT_API_KEY', 'not the token')
 
     def get_article_results(self):
