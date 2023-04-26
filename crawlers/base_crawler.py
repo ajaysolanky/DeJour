@@ -46,12 +46,14 @@ class BaseCrawler(ABC):
                 article = None
             if article is None:
                 article = object()
+            date = getattr(article, "publish_date", None)
+            print(f"Publish date: {date}")
             return pd.Series({
                 "text": getattr(article, "text", None),
                 "preview": None,
                 "top_image_url": getattr(article, "top_image", None),
                 "authors": ','.join(getattr(article, "authors", [])),
-                "publish_timestamp": get_isoformat_and_add_tz_if_not_there(getattr(article, "publish_date", None)),
+                "publish_timestamp": get_isoformat_and_add_tz_if_not_there(date),
                 "fetch_timestamp": pytz.utc.localize(datetime.utcnow()).isoformat()
             })
 

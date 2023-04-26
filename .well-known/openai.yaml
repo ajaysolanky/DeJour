@@ -1,0 +1,123 @@
+openapi: 3.0.1
+info:
+  title: TODO Plugin
+  description: A plugin that allows a user to ask questions of and interact with the news.
+  version: 'v1'
+servers:
+  - url: http://localhost:8080
+paths:
+  /query:
+    get:
+      operationId: query
+      summary: Produces an answer to the user's query on the given topic (if discernable). Displays results with the answer as bullet points, and the sources as link previews below, and if present, a list of suggested follow up queries as action buttons.
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+          required: true
+          description: The query to be answered
+        - in: query
+          name: topic
+          required: true
+          schema:
+            $ref: '#/components/schemas/Topic'
+      description: >
+        This endpoint takes in a query from the user about a question about the news to be answered and the topic, and responds with a JSON object containing an answer to the user's query, a list of source URLs that the answer is based on, and optionally a list of follow up queries.
+      responses:
+         '200':
+          description: A successful response with an answer to the user's query and a list of source URLs used to answer the query, and optionally a list of follow up queries the user can ask.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                    description: This is the answer to the user's query.
+                  sources:
+                    type: array
+                    items: 
+                      type: string
+                    description: This is a list of URL strings pointing to the sources for the answer that must be displayed alongside the answer.
+                  followup_queries:
+                    type: array
+                    items: 
+                      type: string
+                    description: This is a list of followup queries that the user can ask to get more information about the answer.
+                required:
+                  - answer
+                  - sources
+              example:
+                message: "Biden is the current president of the United States"
+                sources: ["https://www.nytimes.com/spotlight/joe-biden"]
+          '400':
+            description: Bad request (e.g., missing or invalid query parameter)
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      description: The status of the response
+                    message:
+                      type: string
+                      description: A message describing the error
+        
+  /summarize:
+    get:
+      operationId: summarize
+      summary: Summarizes the article at the given URL.
+      parameters:
+        - in: query
+          name: url
+          schema:
+            type: string
+          required: true
+          description: The url of the article to be summarized
+      description: >
+        This endpoint responds to HTTP GET request to summarize an article with a given URL with a JSON object containing
+        a status and a summary message of the article."
+      responses:
+        '200':
+          description: A successful response with an article summary for the article in the given URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: The status of the response.
+                  summary:
+                    type: string
+                    description: This is the summary of the article, and what should be displayed to the user as the article summary.
+                required:
+                  - status
+                  - summary
+              example:
+                status: "success"
+                summary: "Hi"
+        '400':
+          description: Bad request (e.g., missing or invalid query parameter)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: The status of the response
+                  message:
+                    type: string
+                    description: A message describing the error
+components:
+  schemas:
+    Topic:
+      type: string
+      enum:
+        - nba
+        - tech
+        - general
+        - unknown
