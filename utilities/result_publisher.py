@@ -52,11 +52,11 @@ class ResultPublisher(BasePublisher):
         except Exception as e:
             logging.error('Failed to post message to connection {}: {}'.format(self.connection_id, str(e)))
 
-    # def post_to_connection(self, message):
-    #     try:
-    #         self.apigatewaymanagementapi.post_to_connection(ConnectionId=self.connection_id, Data=message)
-    #     except Exception as e:
-    #         logging.error('Failed to post message to connection {}: {}'.format(self.connection_id, str(e)))
+    def post_to_connection(self, message):
+        try:
+            self.apigatewaymanagementapi.post_to_connection(ConnectionId=self.connection_id, Data=message)
+        except Exception as e:
+            logging.error('Failed to post message to connection {}: {}'.format(self.connection_id, str(e)))
 
 class DebugPublisher(BasePublisher):
     # def post_to_connection(self, message):
