@@ -38,7 +38,7 @@ def build_crawler(publisher_str: str, add_summaries: bool, use_local_vector_db: 
         PublisherEnum.ATLANTA_DUNIA : get_source_crawler(ADSource),
         PublisherEnum.BBC_INDIA : get_source_crawler(BBCIndiaSource),
         PublisherEnum.GOOGLE_NEWS : GNCrawler,
-        PublisherEnum.NBA : lambda vdb, ndb: NBACrawler(NBASource, vdb, ndb),
+        PublisherEnum.NBA : get_source_crawler(NBASource),
         PublisherEnum.NY_TIMES: NYTCrawler,
         PublisherEnum.SF_STANDARD : get_source_crawler(SFStandardSource),
         PublisherEnum.TECHCRUNCH : get_source_crawler(TechCrunchSource),

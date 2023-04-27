@@ -16,24 +16,27 @@ class SourceCrawler(BaseCrawler):
         all_news = []
         for a in articles:
             #TODO: article is dled twice
-            a.download()
-            a.parse()
-            if "video" in a.url:
-                continue
-            if a.url is None or a.url == "":
-                logging.info("skipping article with no url")
-                continue
-            if a.title is None or a.title == "":
-                logging.info(f"skipping article with no title. Url: {a.url}")
-                continue
-            all_news.append({
-                "url": a.url,
-                "title": a.title
-            })
+            try:
+                a.download()
+                a.parse()
+                if "video" in a.url:
+                    continue
+                if a.url is None or a.url == "":
+                    logging.info("skipping article with no url")
+                    continue
+                if a.title is None or a.title == "":
+                    logging.info(f"skipping article with no title. Url: {a.url}")
+                    continue
+                all_news.append({
+                    "url": a.url,
+                    "title": a.title
+                })
+            except:
+                pass
 
-        all_news = [{
-            "url": a.url,
-            "title": a.title
-        } for a in articles]
+        # all_news = [{
+        #     "url": a.url,
+        #     "title": a.title
+        # } for a in articles]
 
         return pd.DataFrame(all_news)
