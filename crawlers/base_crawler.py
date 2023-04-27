@@ -82,8 +82,9 @@ class BaseCrawler(ABC):
             fetched_batch_data = batch_df.url.apply(self.augment_data)
             batch_df = batch_df.join(fetched_batch_data)
 
-            self.failed_dl_cache |= set(batch_df[batch_df['text'].isna()].url)
-            batch_df = batch_df[batch_df['text'].isna() == False]
+            filter_series = (batch_df['text'].isna() | (batch_df['text'] == ''))
+            self.failed_dl_cache |= set(batch_df[filter_series].url)
+            batch_df = batch_df[filter_series == False]
 
             printable_titles = '\n'.join(batch_df.title)
             logging.info(f"Batch {i + 1} of {num_batches} article titles:\n{printable_titles}")
