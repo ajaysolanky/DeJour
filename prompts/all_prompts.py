@@ -258,7 +258,7 @@ Respond with a list of questions in the following format:
 
 Everything between the ``` must be valid json.
 
-Please come up with a list of questions, in the specified JSON format, for the following list of news snippets:
+Please come up with a list of questions, in the specified JSON format, for the following list of news snippets. IT is very important that you only generate UP TO THREE of the most important questions:
 ----------------
 {text}"""
 

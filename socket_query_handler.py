@@ -121,7 +121,9 @@ def handle_intro_query(result_publisher, event):
         "message": "",
         "questions": intro_questions
     }))
-    
+    result_publisher.post_to_connection(json.dumps({
+        "type": "end",
+    }))
 
     # qh = QueryHandler(publisher, result_publisher, False)
     # intro_query = ChatQuery("intro")
@@ -271,7 +273,24 @@ if __name__ == '__main__':
     event = get_event('$connect', {"url": options.url})
     connect_resp = lambda_handler(event, None)
     assert connect_resp['statusCode'] == 200
+
+    def get_event(route_key, body):
+        event_body = body
+        event = {
+            "requestContext": {
+                "routeKey": route_key,
+                "connectionId": connection_id,
+                'local': True,
+                'in_mem_db': in_mem_db
+            },
+            "body": json.dumps(event_body)
+        }
+        return event
     
+    event = get_event('intro', {"url": options.url})
+    connect_resp = lambda_handler(event, None)
+    assert connect_resp['statusCode'] == 200
+
     if options.summarize:
         event = get_event('summarize', {
             'url': options.url,
