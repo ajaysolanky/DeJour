@@ -179,7 +179,7 @@ class QueryHandler(object):
         self.vector_db = VectorDBWeaviateCURL(args)
         # self.vector_db = VectorDBLocal(publisher)
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
+        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=False, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
