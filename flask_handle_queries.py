@@ -31,7 +31,8 @@ CORS(app)
 def handle_summarize():
     query = "Summarize this article"
     url = request.args['url']
-    qh = QueryHandler(PublisherEnum.TECHCRUNCH, DebugPublisher(), False, followups=True, verbose=True)
+    # TODO: Need to figure out the right publisher to invoke
+    qh = QueryHandler(PublisherEnum.GOOGLE_NEWS, DebugPublisher(), False, followups=True, verbose=True)
     try:
         chat_result = qh.get_chat_result([], query, url)
         return {
