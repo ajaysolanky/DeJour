@@ -9,7 +9,7 @@ paths:
   /query:
     get:
       operationId: query
-      summary: Produces an answer to the user's query on the given topic (if discernable). Displays results with the answer as bullet points, and the sources as link previews below, and if present, a list of suggested follow up queries as action buttons.
+      summary: Produces an answer to the user's query on the given topic. Displays results with the answer as bullet points, and the sources as link preview cards below, and if present, a list of suggested follow up queries as links to tap.
       parameters:
         - in: query
           name: query
