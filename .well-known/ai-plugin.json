@@ -9,10 +9,10 @@
     },
     "api": {
       "type": "openapi",
-      "url": "http://localhost:8080/.well-known/openai.yaml",
+      "url": "https://getdejour.com/.well-known/openai.yaml",
       "is_user_authenticated": false
     },
-    "logo_url": "http://localhost:8080/.well-known/logo.png",
+    "logo_url": "https://getdejour.com/.well-known/logo.png",
     "contact_email": "teamvangoapp@gmail.com",
     "legal_info_url": "http://example.com/legal-info"
   }
