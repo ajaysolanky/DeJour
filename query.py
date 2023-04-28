@@ -35,7 +35,7 @@ class ChatQuery(Query):
         self.vector_db = vector_db
         self.inline = config.get('inline')
         self.followups = config.get('followups')
-        self.use_summaries = config.get('use_summaries')
+        self.use_summaries = config.get('use_summaries', True)
         self.is_book = config.get('is_book')
         condense_model = config.get('condense_model', 'gpt-3.5-turbo')
         answer_model = config.get('answer_model', 'gpt-3.5-turbo')

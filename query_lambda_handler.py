@@ -41,9 +41,16 @@ def lambda_handler(event, context):
         publisher = PublisherEnum.GOOGLE_NEWS
     elif question_topic == "general" or question_topic == "unknown":
         publisher = PublisherEnum.GOOGLE_NEWS
-    qh = QueryHandler(publisher, DebugPublisher(), False, followups=True, verbose=True)
+    qh = QueryHandler(publisher, DebugPublisher(), {
+        'inline': False,
+        'followups': True,
+        'verbose': True,
+        'condense_model': 'gpt-3.5-turbo',
+        'answer_model': 'gpt-3.5-turbo',
+        'streaming': False
+    })
     try:
-        chat_result = qh.get_chat_result([], query, query)
+        chat_result = qh.get_chat_result([], query, get_article_info_from_url('adslk'))
         def transform_sources(source):
             return source["url"]
         mapped_sources = list(map(transform_sources, chat_result["sources"]))
@@ -96,16 +103,67 @@ def get_publisher_for_url(url):
         raise Exception("Invalid url")
     
 class QueryHandler(object):
-    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
+    def __init__(self, publisher_enum: PublisherEnum, result_publisher, config):
         is_book = publisher_enum.name.startswith('BOOK_')
-        if is_book:
-            args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+        if config.get('use_local_vector_db'):
+            self.vector_db = VectorDBLocal({'publisher_name': publisher_enum.value})
         else:
-            args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
-        self.vector_db = VectorDBWeaviateCURL(args)
-        # self.vector_db = VectorDBLocal(publisher)
+            if is_book:
+                args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+            else:
+                args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
+            self.vector_db = VectorDBWeaviateCURL(args)
+
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=False, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
+        config["is_book"] = is_book
+        config["streaming_callback"] = streaming_callback
+        self.cq = ChatQuery(self.vector_db, config)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
+
+if __name__ == '__main__':
+    p = optparse.OptionParser()
+    p.add_option('--url')
+    p.add_option('--condense_model', default='gpt-3.5-turbo')
+    p.add_option('--answer_model', default='gpt-3.5-turbo')
+    p.add_option('--inline', action='store_true')
+    p.add_option('--summarize', action='store_true')
+    p.add_option('--followups', action='store_true')
+    p.add_option('--use_summaries', action='store_true')
+    p.add_option('--use_local_vector_db', action='store_true')
+    random_connection_id = str(uuid.uuid4())
+    p.add_option('--connectionid', default=random_connection_id)
+    options, arguments = p.parse_args()
+
+    connection_id = options.connectionid
+    in_mem_db = InMemoryDB()
+
+    def get_event(route_key, body):
+        event_body = body
+        event = {
+            "requestContext": {
+                "routeKey": route_key,
+                "connectionId": connection_id,
+                'local': True,
+                'in_mem_db': in_mem_db
+            },
+            "queryStringParameters": event_body
+        }
+        return event
+
+    print("\nHow can I help you?\n")
+    query = input()
+    event = get_event('query', {
+        'query': query,
+        'url': options.url,
+        'inline': options.inline,
+        'followups': options.followups,
+        'use_summaries': options.use_summaries,
+        'use_local_vector_db': options.use_local_vector_db,
+        'condense_model': options.condense_model,
+        'answer_model': options.answer_model
+    })
+    
+    result = lambda_handler(event, None)
+    assert result['statusCode'] == 200
