@@ -8,7 +8,7 @@ import uuid
 from query import ChatQuery
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
 from utilities.chat_history_db import ChatHistoryService, ChatHistoryDB, InMemoryDB
-from utilities.result_publisher import ResultPublisher, DebugPublisher
+from utilities.result_publisher import BasePublisher, ResultPublisher, DebugPublisher
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_utils.streaming_socket_callback_handler import StreamingSocketOutCallbackHandler
 
@@ -79,14 +79,20 @@ def handle_query_or_summarize(req_type, body, chat_db: ChatHistoryService, resul
         query = body['query']
     else:
         raise Exception('req type should be "summarize" or "query"')
-    
-    use_local_vector_db = body.get("use_local_vector_db", False)
-    url = body.get("url", "")
-    inline = body.get("inline", False)
-    followups = body.get("followups", False)
-    use_summaries = body.get("use_summaries", True)
 
-    return _handle_query(query, url, inline, chat_db, result_publisher, followups, use_summaries, use_local_vector_db)
+    config = {
+        'url': body.get("url", ""),
+        'use_local_vector_db': body.get("use_local_vector_db", False),
+        'inline': body.get("inline", False),
+        'followups': body.get("followups", False),
+        'use_summaries': body.get("use_summaries", True),
+        'condense_model': body.get("condense_model", "gpt-3.5-turbo"),
+        'answer_model': body.get("answer_model", "gpt-3.5-turbo"),
+        'streaming': True,
+        'verbose': True
+    }
+
+    return _handle_query(query, result_publisher, chat_db, config)
 
 def handle_intro_query(result_publisher, event):
     body = json.loads(event.get("body", ""))
@@ -132,12 +138,14 @@ def handle_intro_query(result_publisher, event):
         'statusCode': 200,
     }
 
-def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publisher, followups, use_summaries, use_local_vector_db):
+def _handle_query(query, result_publisher: BasePublisher, chat_db: ChatHistoryService, config: dict):
+    url = config.get('url')
     logging.info("Handling query: " + query)
     chat_history = chat_db.get_chat_history()
     logging.info("Got chat history: " + str(chat_history))
     cur_article_info = get_article_info_from_url(url)
-    response = _make_query(query, url, chat_history, inline, result_publisher, followups, use_summaries, use_local_vector_db, cur_article_info)
+    config['cur_article_info'] = cur_article_info
+    response = _make_query(query, result_publisher, chat_history, config)
     formatted_response = json.dumps(response)
     logging.info("Formatted response: " + formatted_response)
     sources = response.get("sources")
@@ -172,14 +180,16 @@ def _handle_query(query, url, inline, chat_db: ChatHistoryService, result_publis
         'body': 'Query processed.'
     }
 
-def _make_query(query, url, chat_history, inline, result_publisher, followups, use_summaries, use_local_vector_db, cur_article_info):
+def _make_query(query, result_publisher: BasePublisher, chat_history, config: dict):
     chat_history_tups = [(e['question'], e['answer']) for e in chat_history]
     chat_history_tups = chat_history_tups[-1*HISTORY_LOOKBACK_LEN:]
+    url = config.get('url')
     try:
         publisher = get_publisher_for_url(url)
-        qh = QueryHandler(publisher, result_publisher, inline, followups=followups, use_summaries=use_summaries, use_local_vector_db=use_local_vector_db, verbose=True)
+        # qh = QueryHandler(publisher, result_publisher, inline, followups=followups, use_summaries=use_summaries, use_local_vector_db=use_local_vector_db, verbose=True)
+        qh = QueryHandler(publisher, result_publisher, config)
         try:
-            chat_result = qh.get_chat_result(chat_history_tups, query, cur_article_info)
+            chat_result = qh.get_chat_result(chat_history_tups, query, config.get('cur_article_info'))
             if "followup_questions" in chat_result:
                 chat_result["questions"] = chat_result["followup_questions"]
             return chat_result
@@ -223,11 +233,12 @@ def get_publisher_for_url(url):
         return PublisherEnum.BOOK_LOTR_PDF
     else:
         raise Exception("Invalid url")
-    
+
 class QueryHandler(object):
-    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, use_summaries: bool, verbose: bool, use_local_vector_db: bool = False):
+    def __init__(self, publisher_enum: PublisherEnum, result_publisher, config):
+    # def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, use_summaries: bool, verbose: bool, use_local_vector_db: bool = False):
         is_book = publisher_enum.name.startswith('BOOK_')
-        if use_local_vector_db:
+        if config.get('use_local_vector_db'):
             self.vector_db = VectorDBLocal({'publisher_name': publisher_enum.value})
         else:
             if is_book:
@@ -237,7 +248,10 @@ class QueryHandler(object):
             self.vector_db = VectorDBWeaviateCURL(args)
 
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=True, streaming_callback=streaming_callback, use_summaries=use_summaries, verbose=verbose, book=is_book)
+        config["is_book"] = is_book
+        config["streaming_callback"] = streaming_callback
+        self.cq = ChatQuery(self.vector_db, config)
+        # self.cq = ChatQuery(self.vector_db, condense_model=condense_model, chat_model=chat_model, inline=inline, followups=followups, streaming=True, streaming_callback=streaming_callback, use_summaries=use_summaries, verbose=verbose, book=is_book)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
@@ -245,6 +259,8 @@ class QueryHandler(object):
 if __name__ == '__main__':
     p = optparse.OptionParser()
     p.add_option('--url')
+    p.add_option('--condense_model', default='gpt-3.5-turbo')
+    p.add_option('--answer_model', default='gpt-3.5-turbo')
     p.add_option('--inline', action='store_true')
     p.add_option('--summarize', action='store_true')
     p.add_option('--followups', action='store_true')
@@ -310,7 +326,9 @@ if __name__ == '__main__':
                 'inline': options.inline,
                 'followups': options.followups,
                 'use_summaries': options.use_summaries,
-                'use_local_vector_db': options.use_local_vector_db
+                'use_local_vector_db': options.use_local_vector_db,
+                'condense_model': options.condense_model,
+                'answer_model': options.answer_model
             })
             
             result = lambda_handler(event, None)

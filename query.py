@@ -29,26 +29,30 @@ class Query:
     }
 
 class ChatQuery(Query):
-    CHAT_MODEL_CONDENSE_QUESTION = 'gpt-3.5-turbo'
-    CHAT_MODEL_ANSWER_QUESTION = 'gpt-3.5-turbo'
-
-    def __init__(self, vector_db, inline=False, followups=False, streaming=False, streaming_callback=None, use_summaries=True, verbose=True, book=False) -> None:
-        self.inline = inline
-        self.followups = followups
+    def __init__(self,
+                 vector_db,
+                 config):
         self.vector_db = vector_db
-        self.use_summaries = use_summaries
-        self.book = book
+        self.inline = config.get('inline')
+        self.followups = config.get('followups')
+        self.use_summaries = config.get('use_summaries')
+        self.is_book = config.get('is_book')
+        condense_model = config.get('condense_model', 'gpt-3.5-turbo')
+        answer_model = config.get('answer_model', 'gpt-3.5-turbo')
+        streaming = config.get('streaming')
+        streaming_callback = config.get('streaming_callback')
+        verbose = config.get('verbose')
         self.condense_question_prompt = PromptTemplate.from_template(CONDENSE_QUESTION_PROMPT)
         answer_question_prompt = ANSWER_QUESTION_PROMPT_INLINE if self.inline else ANSWER_QUESTION_PROMPT
         self.answer_question_prompt = PromptTemplate.from_template(answer_question_prompt)
         document_prompt = PromptTemplate.from_template(DOCUMENT_PROMPT)
-        condense_llm = ChatOpenAI(temperature=0, model_name=self.CHAT_MODEL_CONDENSE_QUESTION)
+        condense_llm = ChatOpenAI(temperature=0, model_name=condense_model)
         callback_manager = CallbackManager([streaming_callback]) if streaming else None
         answer_llm = ChatOpenAI(
             streaming=streaming,
             callback_manager=callback_manager,
             temperature=0,
-            model_name=self.CHAT_MODEL_ANSWER_QUESTION,
+            model_name=answer_model,
             verbose=verbose
             )
         condense_question_chain = LLMChain(llm=condense_llm, prompt=self.condense_question_prompt, verbose=verbose)
@@ -178,7 +182,7 @@ class ChatQuery(Query):
             unique_source_docs = list(filter(lambda x: x is not None, source_docs))
             unique_source_docs = {d.metadata.get('source'): d for d in unique_source_docs}.values()
 
-        src_field_db_map = self.ARTICLE_SOURCE_FIELD_DB_MAP if not self.book else self.BOOK_SOURCE_FIELD_DB_MAP
+        src_field_db_map = self.ARTICLE_SOURCE_FIELD_DB_MAP if not self.is_book else self.BOOK_SOURCE_FIELD_DB_MAP
 
         return {
             "answer": answer,
