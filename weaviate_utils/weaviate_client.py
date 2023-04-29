@@ -1,7 +1,9 @@
+import datetime
 import logging
 import hashlib
 import os
 import uuid
+import pytz
 import weaviate
 from weaviate.util import get_valid_uuid
 import requests
@@ -31,6 +33,16 @@ class WeaviateService(ABC):
         r = requests.get(f"{self.CLUSTER_URL}/v1/schema", headers={"Authorization": f"Bearer {self.API_KEY}"})
         class_names = [el['class'] for el in r.json()['classes']]
         return self.class_name in class_names
+
+    @abstractmethod
+    def dump_old_data(self, cutoff_threshold_hours: int) -> None:
+        """
+        Invalidates old data from a single class in the Weaviate vector database by deleting data older than the specified hours.
+
+        Args:
+            cutoff_threshold_hours: int, the number of hours to consider data as old.
+        """
+        pass
 
     @abstractmethod
     def create_weaviate_class(self):
@@ -130,6 +142,26 @@ class WeaviatePythonClient(WeaviateService):
         logging.info(f"deleting {self.class_name}...")
         self.client.schema.delete_class(self.class_name)
         logging.info(f"deleted {self.class_name}!")
+
+    def dump_old_data(self, cutoff_threshold_hours: int) -> None:
+        self.client.batch.consistency_level = weaviate.data.replication.ConsistencyLevel.ALL  # default QUORUM
+
+        current_time = datetime.datetime.now(pytz.utc)
+        cutoff_time = current_time - datetime.timedelta(hours=cutoff_threshold_hours)
+        cutoff_time_iso = cutoff_time.isoformat()
+
+        result = self.client.batch.delete_objects(
+            class_name=self.class_name,
+            where={
+                "operator": "LessThan",
+                "path": ["fetch_timestamp"],
+                "valueDate": cutoff_time_iso,
+            },
+            output="verbose",
+            dry_run=False
+        )
+
+        print(result)
 
 #TODO: check status code and do error handling
 # This class exists so as to avoid setup latency incurred by python client
@@ -236,3 +268,6 @@ class WeaviateCURL(WeaviateService):
         r = requests.delete(self.CLUSTER_URL+'/v1/schema/'+self.class_name, headers=self.get_headers())
         if r.status_code != 200:
             raise Exception('Failed!')
+        
+    def dump_old_data(self, cutoff_threshold_hours: int) -> None:
+        raise NotImplementedError()

@@ -24,6 +24,7 @@ class BaseCrawler(ABC):
     UPLOAD_BATCH_SIZE = 10
     SUMMARY_MODEL = 'gpt-3.5-turbo'
     SUMMARY_PROMPT = ARTICLE_SUMMARIZATION_PROMPT
+    CUTOFF_THRESHOLD_HOURS_OLD_NEWS = 72
 
     def __init__(self, vector_db, news_db, add_summaries):
         self.vector_db = vector_db
@@ -173,8 +174,13 @@ class BaseCrawler(ABC):
             article_text=article_text
         )
 
+    #TODO: only removing from vector db, should think about removing from news db at some point
+    def dump_old_news(self, cutoff_threshold_hours : int):
+        self.vector_db.dump_old_data(cutoff_threshold_hours)
+
     def run_crawler(self):
         while True:
+            self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
             self.fetch_and_upload_news()
             logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.CRAWLER_SLEEP_SECONDS)

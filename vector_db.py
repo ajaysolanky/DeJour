@@ -14,6 +14,9 @@ import numpy as np
 from typing import Any, Dict, Iterable, List, Optional
 from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
+import datetime
+import pytz
+import requests
 
 from weaviate_utils.weaviate_client import WeaviatePythonClient, WeaviateCURL
 from utils import LOCAL_DB_FOLDER
@@ -32,6 +35,10 @@ class VectorDB(ABC):
     
     @abstractmethod
     def get_vectorstore(self):
+        pass
+
+    @abstractmethod
+    def dump_old_data(self, cutoff_threshold_hours : int):
         pass
 
 class CustomFAISS(FAISS):
@@ -161,6 +168,9 @@ class VectorDBLocal(VectorDB):
         with open(self.store_file_path, 'wb') as f:
             pickle.dump(store_copy, f)
 
+    def dump_old_data(self, cutoff_threshold_hours : int):
+        print("Haven't implemented dump old data for local vector db")
+
 class VectorDBWeaviate(VectorDB, ABC):
     def __init__(self, args) -> None:
         super().__init__(args)
@@ -185,6 +195,9 @@ class VectorDBWeaviate(VectorDB, ABC):
                 metadata=metadata
             ))
         return docs
+    
+    def dump_old_data(self, cutoff_threshold_hours : int):
+        self.weaviate_service.dump_old_data(cutoff_threshold_hours)
     
 class VectorDBWeaviatePythonClient(VectorDBWeaviate):
     def __init__(self, args) -> None:
