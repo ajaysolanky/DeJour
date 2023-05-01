@@ -38,7 +38,7 @@ def lambda_handler(event, context):
         'streaming': False
     })
     try:
-        chat_result = qh.get_chat_result([], query, get_article_info_from_url('adslk'))
+        chat_result = qh.get_chat_result([], query, get_article_info_from_url(url))
         return {
             "summary": chat_result["answer"]
         }
