@@ -46,7 +46,7 @@ def handle_summarize():
 
 @app.route('/logo.png', methods=['GET'])
 def serve_logo():
-    response = send_from_directory('.well-known', 'logo.png')
+    response = send_from_directory('.well-known/local', 'logo.png')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
@@ -62,7 +62,14 @@ def handle_chatgpt_query():
         publisher = PublisherEnum.NBA
     elif question_topic == "general" or question_topic == "unknown":
         publisher = PublisherEnum.GOOGLE_NEWS
-    qh = QueryHandler(publisher, DebugPublisher(), False, followups=True, verbose=True)
+    qh = QueryHandler(publisher, DebugPublisher(), {
+        'inline': False,
+        'followups': True,
+        'verbose': True,
+        'condense_model': 'gpt-3.5-turbo',
+        'answer_model': 'gpt-3.5-turbo',
+        'streaming': False
+    })
     try:
         chat_result = qh.get_chat_result([], query, query)
         def transform_sources(source):
@@ -72,9 +79,10 @@ def handle_chatgpt_query():
             followup_prompts = chat_result["followup_questions"]
         else:
             followup_prompts = []
+        import pdb; pdb.set_trace()
         return {
             "answer": chat_result["answer"],
-            "sources": mapped_sources,
+            "sources": chat_result["sources"],
             # "followup_queries": followup_prompts
         }
     except Exception as e:
@@ -89,14 +97,14 @@ def handle_chatgpt_query():
 
 @app.route('/.well-known/ai-plugin.json', methods=['GET'])
 def serve_manifest():
-    response = send_from_directory('.well-known', 'ai-plugin.json')
+    response = send_from_directory('.well-known/local', 'ai-plugin.json')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
 @app.route('/.well-known/openai.yaml', methods=['GET'])
 def serve_api_spec():
     print("Hi")
-    response = send_from_directory('.well-known', 'openai.yaml')
+    response = send_from_directory('.well-known/local', 'openai.yaml')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
@@ -171,16 +179,21 @@ def get_publisher_for_url(url):
         raise Exception("Invalid url")
     
 class QueryHandler(object):
-    def __init__(self, publisher_enum: PublisherEnum, result_publisher, inline: bool, followups: bool, verbose: bool):
+    def __init__(self, publisher_enum: PublisherEnum, result_publisher, config):
         is_book = publisher_enum.name.startswith('BOOK_')
-        if is_book:
-            args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+        if config.get('use_local_vector_db'):
+            self.vector_db = VectorDBLocal({'publisher_name': publisher_enum.value})
         else:
-            args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
-        self.vector_db = VectorDBWeaviateCURL(args)
-        # self.vector_db = VectorDBLocal(publisher)
+            if is_book:
+                args = {"weaviate_class": WeaviateClassBookSnippet(publisher_enum.value)}
+            else:
+                args = {"weaviate_class": WeaviateClassArticleSnippet(publisher_enum.value)}
+            self.vector_db = VectorDBWeaviateCURL(args)
+
         streaming_callback = StreamingSocketOutCallbackHandler(result_publisher)
-        self.cq = ChatQuery(self.vector_db, inline, followups, streaming=False, streaming_callback=streaming_callback, verbose=verbose, book=is_book)
+        config["is_book"] = is_book
+        config["streaming_callback"] = streaming_callback
+        self.cq = ChatQuery(self.vector_db, config)
 
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)

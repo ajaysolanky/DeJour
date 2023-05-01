@@ -4,12 +4,12 @@ info:
   description: A plugin that allows a user to ask questions of and interact with the news.
   version: 'v1'
 servers:
-  - url: https://getdejour.com
+  - url: http://localhost:8080
 paths:
   /query:
     get:
       operationId: query
-      summary: Produces a list of article URLs that are most relevant to the user's query, displayed as a list of source previews, as well as a summarized answer to the user's query based on the sources. 
+      summary: Retrieves a list of URL links to the news articles that are most relevant to the user's query, and a summarized answer to the user's query based on the sources. Display results as a list of link previews with images and the text answer below.
       parameters:
         - in: query
           name: query
@@ -38,8 +38,18 @@ paths:
                   sources:
                     type: array
                     items: 
-                      type: string
-                    description: This is a list of URL strings pointing to the sources for the answer that must be displayed alongside the answer.
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                          description: The URL of the source.
+                        title:
+                          type: string
+                          description: The title of the source.
+                        top_image_url:
+                          type: string
+                          description: The URL of the image to display for the link.
+                    description: This is a list of sources used to answer the user's query, with the title, url and image url for the query.
                   followup_queries:
                     type: array
                     items: 
@@ -50,7 +60,10 @@ paths:
                   - sources
               example:
                 message: "Biden is the current president of the United States"
-                sources: ["https://www.nytimes.com/spotlight/joe-biden"]
+                sources:
+                  - url: "https://www.nytimes.com/spotlight/joe-biden"
+                  - title: "Joe Biden - The New York Times"
+                  - top_image_url: "https://static01.nyt.com/images/2021/01/20/us/politics/20dc-biden-inauguration-01/20dc-biden-inauguration-01-facebookJumbo.jpg"
           '400':
             description: Bad request (e.g., missing or invalid query parameter)
             content:
@@ -64,54 +77,6 @@ paths:
                     message:
                       type: string
                       description: A message describing the error
-        
-  /summarize:
-    get:
-      operationId: summarize
-      summary: Summarizes the article at the given URL.
-      parameters:
-        - in: query
-          name: url
-          schema:
-            type: string
-          required: true
-          description: The url of the article to be summarized
-      description: >
-        This endpoint responds to HTTP GET request to summarize an article with a given URL with a JSON object containing
-        a status and a summary message of the article."
-      responses:
-        '200':
-          description: A successful response with an article summary for the article in the given URL.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    description: The status of the response.
-                  summary:
-                    type: string
-                    description: This is the summary of the article, and what should be displayed to the user as the article summary.
-                required:
-                  - status
-                  - summary
-              example:
-                status: "success"
-                summary: "Hi"
-        '400':
-          description: Bad request (e.g., missing or invalid query parameter)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    description: The status of the response
-                  message:
-                    type: string
-                    description: A message describing the error
 components:
   schemas:
     Topic:
