@@ -103,6 +103,7 @@ def handle_intro_query(result_publisher, event):
         PublisherEnum.ATLANTA_DUNIA: [""],
         PublisherEnum.BBC_INDIA: [""],
         PublisherEnum.GOOGLE_NEWS: ["What is the latest in the Ukraine crisis?", "What are some movies that came out this week?"],
+        PublisherEnum.HORTICULT: ["What's the lineup at the SB Orchid Show?", "What are some fun plant-based gift ideas?"],
         PublisherEnum.NBA: ["What are the biggest storylines in the NBA playoffs?", "Who's the leading scorer in the NBA playoffs?"],
         PublisherEnum.SF_STANDARD: [""],
         PublisherEnum.TECHCRUNCH: ["What are some startups that raised money recently?", "What are some features in the latest iOS?"],
@@ -217,6 +218,8 @@ def get_publisher_for_url(url):
         return PublisherEnum.BBC_INDIA
     elif "google" in url:
         return PublisherEnum.GOOGLE_NEWS
+    elif "horticult" in url:
+        return PublisherEnum.HORTICULT
     elif "nba" in url:
         return PublisherEnum.NBA
     elif "sfstandard" in url:

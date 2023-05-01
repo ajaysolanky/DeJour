@@ -26,12 +26,13 @@ class BaseCrawler(ABC):
     SUMMARY_PROMPT = ARTICLE_SUMMARIZATION_PROMPT
     CUTOFF_THRESHOLD_HOURS_OLD_NEWS = 72
 
-    def __init__(self, vector_db, news_db, add_summaries):
+    def __init__(self, vector_db, news_db, add_summaries, delete_old):
         self.vector_db = vector_db
         self.news_db = news_db
         self.failed_dl_cache = set()
         self.get_num_tokens = TokenCountCalculator().get_num_tokens
         self.add_summaries = add_summaries
+        self.delete_old = delete_old
 
     @abstractmethod
     def fetch_news_df(self):
@@ -180,7 +181,8 @@ class BaseCrawler(ABC):
 
     def run_crawler(self):
         while True:
-            self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
+            if self.delete_old:
+                self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
             self.fetch_and_upload_news()
             logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.CRAWLER_SLEEP_SECONDS)

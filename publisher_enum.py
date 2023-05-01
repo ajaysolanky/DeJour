@@ -4,6 +4,7 @@ class PublisherEnum(Enum):
     ATLANTA_DUNIA = 'atlanta_dunia'
     BBC_INDIA = 'bbc_india'
     GOOGLE_NEWS = 'google_news'
+    HORTICULT = 'horticult'
     NBA = 'nba'
     NY_TIMES = 'ny_times'
     SEQUOIA = 'sequoia'
