@@ -46,7 +46,7 @@ def handle_summarize():
 
 @app.route('/logo.png', methods=['GET'])
 def serve_logo():
-    response = send_from_directory('.well-known/local', 'logo.png')
+    response = send_from_directory('.well-known/local/', 'logo.png')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
@@ -59,15 +59,15 @@ def handle_chatgpt_query():
     if question_topic == "tech":
         publisher = PublisherEnum.TECHCRUNCH
     elif question_topic == "basketball":
-        publisher = PublisherEnum.NBA
+        publisher = PublisherEnum.GOOGLE_NEWS
     elif question_topic == "general" or question_topic == "unknown":
         publisher = PublisherEnum.GOOGLE_NEWS
     qh = QueryHandler(publisher, DebugPublisher(), {
         'inline': False,
         'followups': True,
         'verbose': True,
-        'condense_model': 'gpt-3.5-turbo',
-        'answer_model': 'gpt-3.5-turbo',
+        'condense_model': 'gpt-4',
+        'answer_model': 'gpt-4',
         'streaming': False
     })
     try:
@@ -79,7 +79,6 @@ def handle_chatgpt_query():
             followup_prompts = chat_result["followup_questions"]
         else:
             followup_prompts = []
-        import pdb; pdb.set_trace()
         return {
             "answer": chat_result["answer"],
             "sources": chat_result["sources"],
@@ -97,14 +96,14 @@ def handle_chatgpt_query():
 
 @app.route('/.well-known/ai-plugin.json', methods=['GET'])
 def serve_manifest():
-    response = send_from_directory('.well-known/local', 'ai-plugin.json')
+    response = send_from_directory('.well-known/local/', 'ai-plugin.json')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
 @app.route('/.well-known/openai.yaml', methods=['GET'])
 def serve_api_spec():
     print("Hi")
-    response = send_from_directory('.well-known/local', 'openai.yaml')
+    response = send_from_directory('.well-known/local/', 'openai.yaml')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
