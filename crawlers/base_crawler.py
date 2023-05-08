@@ -1,6 +1,6 @@
 import time
 import logging
-import cleantext
+# import cleantext
 import pandas as pd
 from collections import defaultdict
 from newspaper import Article
@@ -113,7 +113,9 @@ class BaseCrawler(ABC):
         metadatas = []
         orig_idces = []
         for i, r in new_news_df.iterrows():
-            cleaned_text = cleantext.clean(r.text, clean_all=False)
+            #TODO: bring this back
+            # cleaned_text = cleantext.clean(r.text, clean_all=False)
+            cleaned_text = r.text
             base_metadata = {
                     "title": r.title,
                     "source": r.url,
@@ -180,9 +182,12 @@ class BaseCrawler(ABC):
         self.vector_db.dump_old_data(cutoff_threshold_hours)
 
     def run_crawler(self):
+        if self.delete_old:
+            self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
+        self.fetch_and_upload_news()
+
+    def loop_crawler(self):
         while True:
-            if self.delete_old:
-                self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
-            self.fetch_and_upload_news()
+            self.run_crawler()
             logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.CRAWLER_SLEEP_SECONDS)

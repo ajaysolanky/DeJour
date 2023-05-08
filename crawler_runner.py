@@ -14,7 +14,7 @@ from crawlers.sources.nba_source import NBASource
 from crawlers.sources.bbc_india_source import BBCIndiaSource
 from crawlers.sources.horticult import HorticultSource
 from crawlers.nbacrawler import NBACrawler
-from crawlers.nytcrawler import NYTCrawler
+# from crawlers.nytcrawler import NYTCrawler
 from publisher_enum import PublisherEnum
 from news_db import NewsDBLocal, NewsDBFirestoreDatabase
 from vector_db import VectorDBWeaviateCURL, VectorDBWeaviatePythonClient, VectorDBLocal
@@ -27,7 +27,11 @@ def lambda_handler(event, context):
     logging.info("EVENT: %s ; CONTEXT: %s" % (event, context))
     body = event["body"]
     publisher_str = body['publisher']
-    crawler = build_crawler(publisher_str, use_local_vector_db=False, use_local_news_db=False)
+    add_summaries = body.get("add_summaries", False)
+    delete_old = body.get("delete_old", False)
+    use_local_vector_db = body.get("use_local_vector_db", False)
+    use_local_news_db = body.get("use_local_news_db", False)
+    crawler = build_crawler(publisher_str, add_summaries, delete_old, use_local_vector_db, use_local_news_db)
     crawler.fetch_and_upload_news()
     logging.info("FINISHED fetch_and_upload_news")
     return {
@@ -41,7 +45,7 @@ def build_crawler(publisher_str: str, add_summaries: bool, delete_old: bool, use
         PublisherEnum.GOOGLE_NEWS : GNCrawler,
         PublisherEnum.HORTICULT : get_source_crawler(HorticultSource),
         PublisherEnum.NBA : get_source_crawler(NBASource),
-        PublisherEnum.NY_TIMES: NYTCrawler,
+        # PublisherEnum.NY_TIMES: NYTCrawler,
         PublisherEnum.SF_STANDARD : get_source_crawler(SFStandardSource),
         PublisherEnum.TECHCRUNCH : get_source_crawler(TechCrunchSource),
         PublisherEnum.VICE : get_source_crawler(ViceSource),
@@ -82,6 +86,15 @@ if __name__ == '__main__':
     publisher_str = options.publisher
     if not publisher_str:
         raise Exception('must specify a publisher')
+    
+    event = {
+        "body": {
+            "publisher": publisher_str,
+            "add_summaries": options.add_summaries,
+            "delete_old": options.delete_old,
+            "use_local_vector_db": options.use_local_vector_db,
+            "use_local_news_db": options.use_local_news_db
+        }
+    }
 
-    crawler = build_crawler(publisher_str, options.add_summaries, options.delete_old, options.use_local_vector_db, options.use_local_news_db)
-    crawler.run_crawler()
+    lambda_handler(event, {})

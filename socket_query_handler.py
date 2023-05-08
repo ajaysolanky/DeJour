@@ -323,6 +323,7 @@ if __name__ == '__main__':
         while True:
             print("\nHow can I help you?\n")
             query = input()
+            #TODO: add followups model too
             event = get_event('query', {
                 'query': query,
                 'url': options.url,
