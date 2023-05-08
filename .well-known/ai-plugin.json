@@ -1,6 +1,6 @@
 {
     "schema_version": "v1",
-    "name_for_human": "DeJour",
+    "name_for_human": "Dejour",
     "name_for_model": "dejour_plugin",
     "description_for_human": "Plugin for asking questions and interacting with the news. Sourced from Google News and Techcrunch",
     "description_for_model": "Plugin for asking questions and interacting with the news.",
