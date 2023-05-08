@@ -181,6 +181,7 @@ class BaseCrawler(ABC):
     def dump_old_news(self, cutoff_threshold_hours : int):
         self.vector_db.dump_old_data(cutoff_threshold_hours)
 
+<<<<<<< HEAD
     def run_crawler(self):
         if self.delete_old:
             self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
@@ -191,3 +192,19 @@ class BaseCrawler(ABC):
             self.run_crawler()
             logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
             time.sleep(self.CRAWLER_SLEEP_SECONDS)
+=======
+    def run_crawler(self, run_in_loop=True):
+        if run_in_loop:
+             while True:
+                self._run_crawler()
+                logging.info(f"{str(datetime.now())}\nCrawl complete. Sleeping for {self.CRAWLER_SLEEP_SECONDS} seconds. Time: {datetime.now()}")
+                time.sleep(self.CRAWLER_SLEEP_SECONDS)
+
+        else:
+            self._run_crawler()
+       
+    def _run_crawler(self):
+        if self.delete_old:
+            self.dump_old_news(self.CUTOFF_THRESHOLD_HOURS_OLD_NEWS)
+        self.fetch_and_upload_news()
+>>>>>>> arbitraryArticleURL

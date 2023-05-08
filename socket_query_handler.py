@@ -11,12 +11,14 @@ from utilities.chat_history_db import ChatHistoryService, ChatHistoryDB, InMemor
 from utilities.result_publisher import BasePublisher, ResultPublisher, DebugPublisher
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_utils.streaming_socket_callback_handler import StreamingSocketOutCallbackHandler
+from news_db import NewsDBFirestoreDatabase
+from crawlers.ad_hoc_crawler import AdHocCrawler
+from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet
 
 from publisher_enum import PublisherEnum
 from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet, WeaviateClassBookSnippet
 from utils import get_article_info_from_url
 
-dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
 
 HISTORY_LOOKBACK_LEN = 5
@@ -36,21 +38,14 @@ def lambda_handler(event, context):
     result_publisher = DebugPublisher() if local else ResultPublisher(event, connection_id)
     body = json.loads(event.get("body", "{}"))
     if route_key == '$connect':
-        logging.info("Route connect")
-        try:
-            chat_db.create_chat_history()
-            url = body.get("url")
-            response['statusCode'] = 200
-        except Exception as e:
-            logging.error(f"Failed to create chat history with error {e}")
-            response['statusCode'] = 500
+        response['statusCode'] = handle_connect(chat_db, body)
     elif route_key == '$disconnect':
         logging.info("Route disconnect")
         try:
-            chat_db.remove_chat_history()
+            handle_disconnect(chat_db)
             response['statusCode'] = 200
         except Exception as e:
-            logging.error(f"Failed to remove chat history with error {e}")
+            logging.error(f"Failed to handle disconnetion with error {e}")
             response['statusCode'] = 500
     elif route_key == 'intro':
         logging.info("Route intro")
@@ -71,6 +66,15 @@ def lambda_handler(event, context):
         #     }
     return response
 
+def handle_connect(chat_db, body):
+    logging.info("Route connect")
+    try:
+        chat_db.create_chat_history()
+        return 200
+    except Exception as e:
+        logging.error(f"Failed to create chat history with error {e}")
+        return 500
+    
 def handle_query_or_summarize(req_type, body, chat_db: ChatHistoryService, result_publisher):
     logging.info(f"Received {req_type} body: " + json.dumps(body))
     if req_type == 'summarize':
@@ -94,6 +98,16 @@ def handle_query_or_summarize(req_type, body, chat_db: ChatHistoryService, resul
 
     return _handle_query(query, result_publisher, chat_db, config)
 
+def handle_disconnect(chat_db):
+    chat_db.remove_chat_history()
+    vector_db = VectorDBWeaviateCURL(args={"weaviate_class": WeaviateClassArticleSnippet(PublisherEnum.AD_HOC.value)})
+    vector_db.delete_class()
+    news_db = NewsDBFirestoreDatabase(publisher=PublisherEnum.AD_HOC)
+    news_db.drop_table()
+
+    # Delete all records in Firebase and Weaviate of AdHoc class
+
+
 def handle_intro_query(result_publisher, event):
     body = json.loads(event.get("body", ""))
     url = body.get("url", "")
@@ -108,8 +122,17 @@ def handle_intro_query(result_publisher, event):
         PublisherEnum.SF_STANDARD: [""],
         PublisherEnum.TECHCRUNCH: ["What are some startups that raised money recently?", "What are some features in the latest iOS?"],
         PublisherEnum.VICE: ['What are some of the top stories today?'],
-        PublisherEnum.SEQUOIA: ["What are some recent investments by Sequoia?", "What's the latest in generative AI?"]
+        PublisherEnum.SEQUOIA: ["What are some recent investments by Sequoia?", "What's the latest in generative AI?"],
+        PublisherEnum.AD_HOC: []
+
     }
+    if publisher == PublisherEnum.AD_HOC:
+        # Process article ad hoc 
+        vector_db = VectorDBWeaviateCURL(args={"weaviate_class": WeaviateClassArticleSnippet(publisher.value)})
+        news_db = NewsDBFirestoreDatabase(publisher=publisher)
+        crawler = AdHocCrawler(url=url,vector_db=vector_db,news_db=news_db,add_summaries=True,delete_old=True)
+        crawler.run_crawler(run_in_loop=False)
+
     intro_questions = intro_questions_for_publisher.get(publisher)
     if intro_questions is None:
         intro_questions = ["What are some of the top stories today?"]
@@ -181,30 +204,28 @@ def _handle_query(query, result_publisher: BasePublisher, chat_db: ChatHistorySe
         'body': 'Query processed.'
     }
 
+def _ad_hoc_process_url(url, publisher):
+    if publisher == PublisherEnum.AD_HOC:
+            # Process article ad hoc 
+            vector_db = VectorDBWeaviatePythonClient(args={"weaviate_class": WeaviateClassArticleSnippet(publisher.value)})
+            news_db = NewsDBFirestoreDatabase(publisher=publisher)
+            crawler = AdHocCrawler(url=url,vector_db=vector_db,news_db=news_db,add_summaries=True,delete_old=False)
+            crawler.run_crawler(run_in_loop=False)
 def _make_query(query, result_publisher: BasePublisher, chat_history, config: dict):
     chat_history_tups = [(e['question'], e['answer']) for e in chat_history]
     chat_history_tups = chat_history_tups[-1*HISTORY_LOOKBACK_LEN:]
     url = config.get('url')
+    publisher = get_publisher_for_url(url)
+    _ad_hoc_process_url(url, publisher)
+    # qh = QueryHandler(publisher, result_publisher, inline, followups=followups, use_summaries=use_summaries, use_local_vector_db=use_local_vector_db, verbose=True)
+    qh = QueryHandler(publisher, result_publisher, config)
     try:
-        publisher = get_publisher_for_url(url)
-        # qh = QueryHandler(publisher, result_publisher, inline, followups=followups, use_summaries=use_summaries, use_local_vector_db=use_local_vector_db, verbose=True)
-        qh = QueryHandler(publisher, result_publisher, config)
-        try:
-            chat_result = qh.get_chat_result(chat_history_tups, query, config.get('cur_article_info'))
-            if "followup_questions" in chat_result:
-                chat_result["questions"] = chat_result["followup_questions"]
-            return chat_result
-        except Exception as e:
-            logging.error(f"Chat result failed with error: {e}")
-            return {
-                "answer": "DeJour is not supported on this website",
-                "sources": [],
-                "error": "Dejour is not supported on this website"
-            }
-
+        chat_result = qh.get_chat_result(chat_history_tups, query, config.get('cur_article_info'))
+        if "followup_questions" in chat_result:
+            chat_result["questions"] = chat_result["followup_questions"]
+        return chat_result
     except Exception as e:
-        logging.error(f"Get publisher failed with error: {e}")
-        logging.error(f"Invalid url: {url}")
+        logging.error(f"Chat result failed with error: {e}")
         return {
             "answer": "DeJour is not supported on this website",
             "sources": [],
@@ -235,7 +256,8 @@ def get_publisher_for_url(url):
     elif PublisherEnum.BOOK_LOTR_PDF.value in url:
         return PublisherEnum.BOOK_LOTR_PDF
     else:
-        raise Exception("Invalid url")
+        return PublisherEnum.AD_HOC
+        # raise Exception("Invalid url")
 
 class QueryHandler(object):
     def __init__(self, publisher_enum: PublisherEnum, result_publisher, config):
@@ -259,22 +281,39 @@ class QueryHandler(object):
     def get_chat_result(self, chat_history, query, cur_article_info):
         return self.cq.answer_query_with_context(chat_history, query, cur_article_info.title)
 
+def test_intro_msg():
+    action = "$connect"
+    event = {
+        "requestContext": {
+            "action": action
+        }
+    }
+
 if __name__ == '__main__':
+    fallback_query = "Where is Bronny James going for college?"
     p = optparse.OptionParser()
-    p.add_option('--url')
-    p.add_option('--condense_model', default='gpt-3.5-turbo')
-    p.add_option('--answer_model', default='gpt-3.5-turbo')
-    p.add_option('--inline', action='store_true')
-    p.add_option('--summarize', action='store_true')
-    p.add_option('--followups', action='store_true')
-    p.add_option('--use_summaries', action='store_true')
-    p.add_option('--use_local_vector_db', action='store_true')
-    random_connection_id = str(uuid.uuid4())
-    p.add_option('--connectionid', default=random_connection_id)
+    p.add_option('--url', default='')
+    p.add_option('--action', default='connect')
+    p.add_option('--query', default=fallback_query)
+    # p.add_option('--condense_model', default='gpt-3.5-turbo')
+    # p.add_option('--answer_model', default='gpt-3.5-turbo')
+    # p.add_option('--inline', action='store_true')
+    # p.add_option('--summarize', action='store_true')
+    # p.add_option('--followups', action='store_true')
+    # p.add_option('--use_summaries', action='store_true')
+    # p.add_option('--use_local_vector_db', action='store_true')
+    # random_connection_id = str(uuid.uuid4())
+    # p.add_option('--connectionid', default=random_connection_id)
     options, arguments = p.parse_args()
 
-    connection_id = options.connectionid
+    # connection_id = options.connectionid
+    # in_mem_db = InMemoryDB()
+    url = options.url
+    action = options.action
+    query = options.query
+    connection_id = str(uuid.uuid4())
     in_mem_db = InMemoryDB()
+    result_publisher = DebugPublisher()
 
     def get_event(route_key, body):
         event_body = body
@@ -289,51 +328,34 @@ if __name__ == '__main__':
         }
         return event
     
-    event = get_event('$connect', {"url": options.url})
-    connect_resp = lambda_handler(event, None)
-    assert connect_resp['statusCode'] == 200
-
-    def get_event(route_key, body):
-        event_body = body
-        event = {
-            "requestContext": {
-                "routeKey": route_key,
-                "connectionId": connection_id,
-                'local': True,
-                'in_mem_db': in_mem_db
-            },
-            "body": json.dumps(event_body)
-        }
-        return event
+    if action == 'connect':
+        body = {"url": url}
+        event = get_event('$connect', body)
+        lambda_handler(event, {})
+    elif action == 'disconnect':
+        body = {"url": url}
+        event = get_event('$disconnect', {})
+        lambda_handler(event, {})
+    elif action == 'intro':
+        body = {"url": url}
+        event = get_event('intro', body)
+        lambda_handler(event, {})
+    elif action == 'summarize':
+        body = {"url": url}
+        event = get_event('summarize', body)
+        lambda_handler(event, {})
+    elif action == 'query':
+        body = {"query": query, "url": url}
+        event = get_event('query', body)
+        lambda_handler(event, {})
     
-    event = get_event('intro', {"url": options.url})
-    connect_resp = lambda_handler(event, None)
-    assert connect_resp['statusCode'] == 200
+    # event = get_event('$connect', {"url": options.url})
+    # connect_resp = lambda_handler(event, None)
+    # assert connect_resp['statusCode'] == 200
 
-    if options.summarize:
-        event = get_event('summarize', {
-            'url': options.url,
-            'inline': options.inline,
-            'followups': options.followups
-        })
-
-        result = lambda_handler(event, None)
-        assert result['statusCode'] == 200
-    else:
-        while True:
-            print("\nHow can I help you?\n")
-            query = input()
-            #TODO: add followups model too
-            event = get_event('query', {
-                'query': query,
-                'url': options.url,
-                'inline': options.inline,
-                'followups': options.followups,
-                'use_summaries': options.use_summaries,
-                'use_local_vector_db': options.use_local_vector_db,
-                'condense_model': options.condense_model,
-                'answer_model': options.answer_model
-            })
-            
-            result = lambda_handler(event, None)
-            assert result['statusCode'] == 200
+    # if options.summarize:
+    #     event = get_event('summarize', {
+    #         'url': options.url,
+    #         'inline': options.inline,
+    #         'followups': options.followups
+    #     })

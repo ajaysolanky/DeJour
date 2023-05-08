@@ -85,8 +85,8 @@ class ChatHistoryService:
     def get_chat_history(self):
         response = self.db.query(self.connectionid)
         items = response.get('Items', None)
-        if items is None or len(items) == 0:
-            return None
+        if items is None or len(items) == 0 or items == [None]:
+            return []
         return items[0].get('chat_history', [])
 
     def remove_chat_history(self):

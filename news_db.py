@@ -196,4 +196,8 @@ class NewsDBFirestoreDatabase(NewsDB):
         pass
 
     def drop_table(self):
-        pass
+        collection_ref = self.db.collection(self.get_table_name())
+        docs = collection_ref.stream()
+        for doc in docs:
+            doc.reference.delete()
+            print(f"Deleted document with ID: {doc.id}")

@@ -81,6 +81,9 @@ class WeaviatePythonClient(WeaviateService):
         )
         super().__init__(weaviate_class)
 
+    def get_all_classes(self):
+        return self.client.schema.get()
+    
     def create_weaviate_class(self):
         self.client.schema.create_class(self.get_class_obj())
         # try:
@@ -139,6 +142,7 @@ class WeaviatePythonClient(WeaviateService):
         return result['data']['Get'][self.class_name]
 
     def delete_class(self):
+        # TODO: This doesn't work
         logging.info(f"deleting {self.class_name}...")
         self.client.schema.delete_class(self.class_name)
         logging.info(f"deleted {self.class_name}!")
@@ -265,6 +269,7 @@ class WeaviateCURL(WeaviateService):
             return r.json()['data']['Get'][self.class_name]
 
     def delete_class(self):
+        # TODO: This doesn't work
         r = requests.delete(self.CLUSTER_URL+'/v1/schema/'+self.class_name, headers=self.get_headers())
         if r.status_code != 200:
             raise Exception('Failed!')

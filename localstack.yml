@@ -1,0 +1,13 @@
+services:
+  apigateway: 4567
+
+localstack:
+  image: localstack/localstack
+  container_name: localstack_main
+  ports:
+    - "4567-4584:4567-4584"
+  environment:
+    - SERVICES=apigateway
+    - DEBUG=1
+  volumes:
+    - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"

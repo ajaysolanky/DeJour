@@ -198,6 +198,9 @@ class VectorDBWeaviate(VectorDB, ABC):
     
     def dump_old_data(self, cutoff_threshold_hours : int):
         self.weaviate_service.dump_old_data(cutoff_threshold_hours)
+
+    def delete_class(self):
+        self.weaviate_service.delete_class()
     
 class VectorDBWeaviatePythonClient(VectorDBWeaviate):
     def __init__(self, args) -> None:

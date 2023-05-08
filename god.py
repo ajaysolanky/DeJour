@@ -18,9 +18,13 @@ if __name__ == '__main__':
     if not options.action:
         raise Exception('must specify an action')
     
+    weaviate_client = WeaviatePythonClient(weaviate_class=WeaviateClassArticleSnippet(publisher_str))
     if action == "delete":
-        weaviate_client = WeaviatePythonClient(weaviate_class=WeaviateClassArticleSnippet(publisher_str))
         weaviate_client.delete_class()
+    elif action =="get_classes":
+        classes = weaviate_client.get_all_classes()
+        for weaviate_class in classes['classes']:
+            print(weaviate_class['class'])
     else:
         raise Exception('unsupported action')
 

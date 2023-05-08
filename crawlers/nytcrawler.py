@@ -80,9 +80,7 @@ class NYTCrawler(BaseCrawler):
             logging.info(f"processed page: {i}")
             hits_count = json_response['response']['meta']['hits']
             if hits_count < 10:
-                import pdb; pdb.set_trace()
                 return results
-        import pdb; pdb.set_trace()
         return results
 
     def augment_data(self, url):

@@ -16,7 +16,6 @@ from publisher_enum import PublisherEnum
 from weaviate_utils.weaviate_class import WeaviateClassArticleSnippet, WeaviateClassBookSnippet
 from utils import get_article_info_from_url
 
-dynamodb = boto3.resource('dynamodb')
 logging.getLogger().setLevel(logging.INFO)
 
 HISTORY_LOOKBACK_LEN = 5
